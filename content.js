@@ -32,6 +32,7 @@
       ],
       hallName: 'Sporthalle Uhlandschule',
       hallAddress: 'Heilbronner Str. 4, 44143 Dortmund-Körne',
+      logoUrl: '',
       heroStyle: 'foto',
       palette: 'rotblau',
       headline: 'oswald',
