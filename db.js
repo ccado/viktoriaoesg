@@ -46,10 +46,18 @@
     /* ----- Anfragen ----- */
     async addSubmission(s) {
       if (!configured) return { ok: true, local: true };
-      const { error } = await client.from('submissions').insert([{
+      const row = {
         type: s.type || null, dept: s.dept || null, team: s.team || null, name: s.name, birth: s.birth || null,
         email: s.email, phone: s.phone || null, message: s.message || null, status: 'neu'
-      }]);
+      };
+      if (s.payload && Object.keys(s.payload).length) row.payload = s.payload;
+      let { error } = await client.from('submissions').insert([row]);
+      if (error && /payload/.test(error.message || '')) {
+        // Spalte fehlt noch: Antragsdaten in die Nachricht schreiben, damit nichts verloren geht
+        delete row.payload;
+        row.message = [s.message, JSON.stringify(s.payload, null, 1)].filter(Boolean).join('\n\n');
+        ({ error } = await client.from('submissions').insert([row]));
+      }
       return error ? { ok: false, error: error.message } : { ok: true };
     },
     async listSubmissions() {
@@ -195,15 +203,38 @@
       DB.features[table] = true;
       return data;
     },
+    /* Entfernt eine in der Fehlermeldung genannte Spalte, damit ältere Schemas nicht blockieren */
+    _fehlendeSpalte(error, obj) {
+      const m = String(error && error.message || '').match(/'([a-z_]+)' column|column ([a-z_.]+) does not exist/i);
+      const spalte = m ? (m[1] || String(m[2]).split('.').pop()) : null;
+      if (!spalte || !(spalte in obj)) return null;
+      const kopie = Object.assign({}, obj);
+      delete kopie[spalte];
+      return { obj: kopie, spalte: spalte };
+    },
     async addRow(table, row) {
       if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
-      const { error } = await client.from(table).insert([row]);
-      return error ? { ok: false, error: error.message } : { ok: true };
+      let daten = Object.assign({}, row);
+      for (let i = 0; i < 4; i++) {
+        const { error } = await client.from(table).insert([daten]);
+        if (!error) return { ok: true };
+        const fix = DB._fehlendeSpalte(error, daten);
+        if (!fix) return { ok: false, error: error.message };
+        daten = fix.obj;
+      }
+      return { ok: false, error: 'Schema passt nicht, bitte supabase-abteilungen.sql erneut ausführen' };
     },
     async updateRow(table, id, patch) {
       if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
-      const { error } = await client.from(table).update(patch).eq('id', id);
-      return error ? { ok: false, error: error.message } : { ok: true };
+      let daten = Object.assign({}, patch);
+      for (let i = 0; i < 4; i++) {
+        const { error } = await client.from(table).update(daten).eq('id', id);
+        if (!error) return { ok: true };
+        const fix = DB._fehlendeSpalte(error, daten);
+        if (!fix) return { ok: false, error: error.message };
+        daten = fix.obj;
+      }
+      return { ok: false, error: 'Schema passt nicht, bitte supabase-abteilungen.sql erneut ausführen' };
     },
     async removeRow(table, id) {
       if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };

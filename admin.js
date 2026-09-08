@@ -279,6 +279,7 @@
     return `<div class="head"><div><h1>Dashboard</h1><p>Willkommen im Verwaltungsbereich der ÖSG Viktoria 08 e.V. Dortmund.</p></div></div>
     <div class="tiles">
       <button class="tile brand" data-go="anfragen"><b>${open.length}</b><span>Offene Anfragen</span></button>
+      <button class="tile" data-go="anfragen"><b>${subs.filter((s) => s.type === 'Mitgliedsantrag' && s.status === 'neu').length}</b><span>Neue Mitgliedsanträge</span></button>
       <button class="tile" data-go="news"><b>${C.news.length}</b><span>News-Beiträge</span></button>
       <button class="tile" data-go="events"><b>${C.events.length}</b><span>Termine</span></button>
       <button class="tile" data-go="teams"><b>${C.teams.length}</b><span>Mannschaften</span></button>
@@ -297,7 +298,7 @@
   function anfragen() {
     const rows = subs.map((s) => `<tr>
       <td>${dtt(s.createdAt)}</td>
-      <td><span class="t-title">${esc(s.type)}</span><span class="t-sub">${esc(s.dept || '')}${s.team ? ' · ' + esc(s.team) : ''}</span></td>
+      <td><span class="t-title">${s.type === 'Mitgliedsantrag' ? '★ ' : ''}${esc(s.type)}</span><span class="t-sub">${esc(s.dept || '')}${s.team ? ' · ' + esc(s.team) : ''}</span></td>
       <td><span class="t-title">${esc(s.name)}</span><span class="t-sub">${esc(s.email)}${s.phone ? ' · ' + esc(s.phone) : ''}</span></td>
       <td><span class="pill ${esc(s.status)}">${esc(s.status)}</span></td>
       <td class="actions">
@@ -791,7 +792,7 @@
       if (!m.date) return;
       list.push({
         date: m.date, time: m.time, art: 'Spiel', extra: t.name,
-        title: m.home === 'auswaerts' ? esc(m.opponent) + ' (A)' : esc(m.opponent) + ' (H)'
+        title: (m.opponent || 'Gegner offen') + (m.home === 'auswaerts' ? ' (A)' : ' (H)')
       });
     }));
     (internRows.tasks || []).forEach((t) => {
@@ -984,14 +985,46 @@
     const s = subs.find((x) => x.id === id);
     if (!s) return;
     const row = (l, v) => v ? `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>` : '';
-    openModal('Anfrage · ' + s.type, `<div class="detail">
+    const pay = s.payload && typeof s.payload === 'object' ? s.payload : null;
+    const antragsZeilen = pay
+      ? Object.keys(pay).filter((k) => String(pay[k] || '') !== '').map((k) => row(k, pay[k])).join('')
+      : '';
+    openModal((s.type === 'Mitgliedsantrag' ? 'Mitgliedsantrag · ' : 'Anfrage · ') + s.name, `<div class="detail">
       ${row('Eingang', dtt(s.createdAt))}${row('Anliegen', s.type)}${row('Abteilung', s.dept)}${row('Mannschaft', s.team)}
-      ${row('Name', s.name)}${row('Geburtsjahr', s.birth)}${row('E-Mail', s.email)}${row('Telefon', s.phone)}
-      ${row('Nachricht', s.message)}${row('Status', s.status)}</div>`,
+      ${row('Name', s.name)}${row('Geburtsdatum', s.birth)}${row('E-Mail', s.email)}${row('Telefon', s.phone)}
+      ${row('Nachricht', s.message)}${row('Status', s.status)}</div>
+      ${antragsZeilen ? `<h4 class="group-title" style="margin:20px 0 10px">Antragsdaten</h4><div class="detail">${antragsZeilen}</div>` : ''}
+      ${s.member_id ? '<p class="t-sub" style="margin-top:12px">Bereits in die Mitgliederverwaltung übernommen.</p>' : ''}`,
       `<button class="btn ghost" type="button" id="mMail">E-Mail schreiben</button>
        <button class="btn danger" type="button" id="mRej">Ablehnen</button>
        <button class="btn ok" type="button" id="mAcc">Annehmen</button>`);
     el('mMail').addEventListener('click', () => { location.href = `mailto:${s.email}?subject=${encodeURIComponent('Deine Anfrage an die ÖSG Viktoria 08')}`; });
+    if (el('mTake')) el('mTake').addEventListener('click', async () => {
+      const p = pay || {};
+      const dep = C.depts.find((x) => x.name === s.dept);
+      const tm = C.teams.find((x) => x.name === (s.team || p['Mannschaft']));
+      const mitglied = {
+        dept: dep ? dep.slug : (C.depts[0] && C.depts[0].slug) || 'fussball',
+        team: tm ? (tm.slug || tm.id) : null,
+        first_name: p['Vorname'] || String(s.name || '').split(' ')[0] || s.name,
+        last_name: p['Nachname'] || String(s.name || '').split(' ').slice(1).join(' ') || '-',
+        birthdate: p['Geburtsdatum'] || s.birth || null,
+        email: s.email || null, phone: s.phone || null,
+        address: [p['Straße'], p['PLZ und Ort']].filter(Boolean).join(', ') || null,
+        status: 'aktiv',
+        member_since: p['Beginn'] || new Date().toISOString().slice(0, 10),
+        fee_note: [p['Kontoinhaber'] ? 'Kontoinhaber: ' + p['Kontoinhaber'] : '', p['IBAN'] ? 'IBAN: ' + p['IBAN'] : '', p['SEPA-Mandat'] ? 'SEPA: ' + p['SEPA-Mandat'] : ''].filter(Boolean).join(' · ') || null,
+        notes: [p['Erziehungsberechtigte(r)'] ? 'EB: ' + p['Erziehungsberechtigte(r)'] + (p['Telefon EB'] ? ', ' + p['Telefon EB'] : '') : '',
+                p['Fotoeinwilligung'] ? 'Fotoeinwilligung: ' + p['Fotoeinwilligung'] : '',
+                s.message || ''].filter(Boolean).join('\n') || null
+      };
+      const res = await window.OSGDB.addRow('members', mitglied);
+      if (!res.ok) { toast('Übernahme fehlgeschlagen: ' + res.error); return; }
+      await window.OSGDB.setStatus(id, 'angenommen');
+      internRows.members = (await window.OSGDB.rows('members', 'last_name')) || internRows.members;
+      subs = (await window.OSGDB.listSubmissions()) || subs;
+      closeModal(); render(); toast('Als Mitglied angelegt');
+    });
     if (el('mAcc')) el('mAcc').addEventListener('click', () => setStatus(id, 'angenommen'));
     if (el('mRej')) el('mRej').addEventListener('click', () => setStatus(id, 'abgelehnt'));
   }

@@ -511,6 +511,12 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: .98; le
 .form .check a { color: var(--brand); text-decoration: underline; }
 .form .btn { justify-self: start; }
 .form-note { font-size: 14px; min-height: 1em; }
+.form--antrag { gap: 26px; }
+.form--antrag fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 14px; }
+.form--antrag fieldset + fieldset { border-top: 1px solid var(--line); padding-top: 24px; }
+.form--antrag legend { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: var(--brand); padding: 0 0 4px; }
+.fs-hint { font-size: 13.5px; color: var(--ink-faint); max-width: 60ch; }
+.form--antrag [hidden] { display: none; }
 .form-note.ok { color: #1a7f4b; }
 .form-note.err { color: var(--red); }
 .sponsor img { max-width: 70%; max-height: 60%; object-fit: contain; }

@@ -108,6 +108,25 @@ Admins und Zugänge ohne Einschränkung sehen alles.
 Auch Formularanfragen sind so gefiltert: Ein Abteilungszugang sieht nur Anfragen seiner
 Abteilung, Admins sehen alle.
 
+## Online-Mitgliedsantrag
+
+Datei `supabase-antrag.sql` im SQL Editor ausführen (ergänzt die Spalten `payload` und
+`member_id` und erweitert die E-Mail-Benachrichtigung).
+
+Seite `#/mitglied-werden`: vollständiger Aufnahmeantrag mit Sportart, Personendaten,
+gesetzlicher Vertretung bei Minderjährigen (erscheint automatisch je Geburtsdatum),
+SEPA-Lastschriftmandat, Anerkennung der Satzung, Datenschutz und freiwilliger
+Fotoeinwilligung.
+
+Im Admin steht der Antrag unter Anfragen mit Stern markiert. Die Detailansicht zeigt alle
+Antragsfelder, ein Knopf **Als Mitglied übernehmen** legt daraus direkt einen Datensatz in der
+Mitgliederverwaltung an (Abteilung, Mannschaft, Adresse, SEPA-Angaben im Beitragshinweis,
+Fotoeinwilligung und Angaben zur gesetzlichen Vertretung in den Notizen).
+
+E-Mail: Sobald `supabase-email.sql` mit Resend-Key eingerichtet ist, geht bei jedem Antrag
+automatisch eine Mail mit allen Feldern an die eingetragene Adresse. Antworten geht direkt,
+die Adresse des Antragstellers ist als Antwortadresse gesetzt.
+
 ## Wichtige Hinweise
 - **Kontaktdaten der Ansprechpartner sind bewusst leer** (Platzhalter). Namen und Funktionen
   sind eingetragen, E-Mail/Telefon im Admin ergänzen.

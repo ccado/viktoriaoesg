@@ -87,7 +87,7 @@
     document.getElementById('siteNav').innerHTML = NAV.map(([h, l]) => `<a href="${h}">${l}</a>`).join('');
     const brandCrest = document.querySelector('.brand .crest, .brand .crest-img');
     if (brandCrest) brandCrest.outerHTML = crest();
-    document.getElementById('mobileNav').innerHTML = NAV.concat([['#/kontakt#mitglied', 'Mitglied werden']]).map(([h, l]) => `<a href="${h}">${l}</a>`).join('');
+    document.getElementById('mobileNav').innerHTML = NAV.concat([['#/mitglied-werden', 'Mitglied werden']]).map(([h, l]) => `<a href="${h}">${l}</a>`).join('');
     document.getElementById('footerRoot').innerHTML = `
       <div class="wrap footer-top">
         <div class="footer-brand">
@@ -95,7 +95,7 @@
           <p>${esc(st.longName)}: Vereinssport im Dortmunder Osten, seit ${esc(st.founded)}.</p>
         </div>
         <div class="footer-col"><h4>Verein</h4><a href="#/verein">Über uns</a><a href="#/abteilungen">Abteilungen</a><a href="#/mannschaften">Mannschaften</a><a href="#/news">News</a><a href="#/faq">FAQ</a></div>
-        <div class="footer-col"><h4>Mitmachen</h4><a href="#/kontakt">Probetraining</a><a href="#/kontakt">Mitglied werden</a><a href="#/dokumente">Dokumente</a><a href="#/kontakt">Partner werden</a></div>
+        <div class="footer-col"><h4>Mitmachen</h4><a href="#/kontakt">Probetraining</a><a href="#/mitglied-werden">Mitglied werden</a><a href="#/dokumente">Dokumente</a><a href="#/kontakt">Partner werden</a></div>
         <div class="footer-col"><h4>Kontakt</h4><a href="mailto:${esc(st.email)}">${esc(st.email)}</a><a href="${esc(st.instagram)}" target="_blank" rel="noopener">Instagram</a><a href="#/kontakt">Anfahrt</a></div>
       </div>
       <div class="wrap footer-bottom">
@@ -148,7 +148,7 @@
         <h1>Viktoria <span class="yr">08</span></h1>
         <p class="hero__sub">${esc(hero.sub)}</p>
         <div class="hero__cta">
-          <a class="btn" href="#/kontakt" style="--bg:#fff;--fg:var(--ink);border-color:#fff">Mitglied werden <span class="arr">→</span></a>
+          <a class="btn" href="#/mitglied-werden" style="--bg:#fff;--fg:var(--ink);border-color:#fff">Mitglied werden <span class="arr">→</span></a>
           <a class="btn btn--ghost" href="#/abteilungen">Abteilungen ansehen</a>
         </div>
         <div class="hero__strip">
@@ -209,8 +209,8 @@
           <h2>Komm<br />ins Team</h2>
           <p>${esc(String(C.pages['mitglied-werden'].body).split(/\n{2,}/)[0])}</p>
           <div class="join__cta">
-            <a class="btn btn--solidlight" href="#/kontakt">Probetraining anfragen <span class="arr">→</span></a>
-            <a class="btn btn--ghost" href="#/dokumente" style="border-color:rgba(255,255,255,.55);color:#fff">Mitgliedsantrag</a>
+            <a class="btn btn--solidlight" href="#/mitglied-werden">Antrag online stellen <span class="arr">→</span></a>
+            <a class="btn btn--ghost" href="#/kontakt" style="border-color:rgba(255,255,255,.55);color:#fff">Erst Probetraining</a>
           </div>
         </div>
         <div class="steps">
@@ -556,6 +556,99 @@
     </section>`;
   }
 
+  function antrag(query) {
+    const st = C.settings, p = C.pages['mitglied-werden'];
+    const preD = (query.get && query.get('dept')) || '';
+    const preT = (query.get && query.get('team')) || '';
+    const deptOpts = C.depts.map((d) => `<option${d.name === preD ? ' selected' : ''}>${esc(d.name)}</option>`).join('');
+    const fbTeams = C.teams.filter((t) => t.dept === 'Fußball').sort((a, b) => (a.order || 0) - (b.order || 0));
+    const teamGroups = [...new Set(fbTeams.map((t) => t.group || 'Mannschaften'))].map((g) =>
+      `<optgroup label="${esc(g)}">${fbTeams.filter((t) => (t.group || 'Mannschaften') === g)
+        .map((t) => `<option${t.name === preT ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</optgroup>`).join('');
+
+    return pageHead('Mitglied werden', 'Aufnahmeantrag', 'Antrag online ausfüllen und absenden. Wir melden uns nach der Prüfung durch den Vorstand.') + `
+    <section class="section"><div class="wrap form-grid">
+      <form class="form form--antrag" id="antragForm" novalidate>
+        <fieldset>
+          <legend>1. Sportart</legend>
+          <div class="f2">
+            <label>Abteilung *<select name="dept" id="aDept" required><option value="">bitte wählen</option>${deptOpts}</select></label>
+            <label id="aTeamWrap"${preD === 'Fußball' ? '' : ' hidden'}>Mannschaft
+              <select name="team"><option value="">weiß ich noch nicht</option>${teamGroups}</select></label>
+          </div>
+          <label>Gewünschter Beginn<input name="beginn" type="date" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. Angaben zur Person</legend>
+          <div class="f2">
+            <label>Vorname *<input name="vorname" required /></label>
+            <label>Nachname *<input name="nachname" required /></label>
+          </div>
+          <div class="f2">
+            <label>Geburtsdatum *<input name="geburtsdatum" type="date" required /></label>
+            <label>Geschlecht<select name="geschlecht"><option value="">keine Angabe</option><option>weiblich</option><option>männlich</option><option>divers</option></select></label>
+          </div>
+          <div class="f2">
+            <label>Straße und Hausnummer *<input name="strasse" required /></label>
+            <label>PLZ und Ort *<input name="plzOrt" required placeholder="44143 Dortmund" /></label>
+          </div>
+          <div class="f2">
+            <label>E-Mail *<input name="email" type="email" required /></label>
+            <label>Telefon / Mobil *<input name="telefon" required /></label>
+          </div>
+          <label>Staatsangehörigkeit<input name="staat" /></label>
+        </fieldset>
+
+        <fieldset id="aMinor" hidden>
+          <legend>3. Gesetzliche Vertretung (bei unter 18 Jahren)</legend>
+          <p class="fs-hint">Bei Minderjährigen unterschreibt eine erziehungsberechtigte Person.</p>
+          <div class="f2">
+            <label>Name Erziehungsberechtigte(r) *<input name="ebName" /></label>
+            <label>Telefon *<input name="ebTelefon" /></label>
+          </div>
+          <label>E-Mail<input name="ebEmail" type="email" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>4. Beitragszahlung (SEPA-Lastschriftmandat)</legend>
+          <p class="fs-hint">Wir buchen den Mitgliedsbeitrag bequem per Lastschrift ein. Das Mandat kannst du jederzeit widerrufen.</p>
+          <div class="f2">
+            <label>Kontoinhaber *<input name="ktoInhaber" required /></label>
+            <label>Kreditinstitut<input name="bank" /></label>
+          </div>
+          <div class="f2">
+            <label>IBAN *<input name="iban" required placeholder="DE.. .... .... .... .... .." /></label>
+            <label>BIC<input name="bic" /></label>
+          </div>
+          <label class="check"><input type="checkbox" name="sepa" required /> <span>Ich ermächtige die ${esc(st.legalName)}, Zahlungen von meinem Konto mittels Lastschrift einzuziehen, und weise mein Kreditinstitut an, die Lastschriften einzulösen. *</span></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>5. Erklärungen</legend>
+          <label class="check"><input type="checkbox" name="satzung" required /> <span>Ich erkenne die Satzung und die Ordnungen des Vereins an. *</span></label>
+          <label class="check"><input type="checkbox" name="privacy" required /> <span>Ich habe die <a href="#/datenschutz">Datenschutzerklärung</a> gelesen und bin mit der Verarbeitung meiner Daten zur Mitgliederverwaltung einverstanden. *</span></label>
+          <label class="check"><input type="checkbox" name="fotos" /> <span>Ich bin damit einverstanden, dass Fotos und Videos von Training, Spielen und Vereinsfeiern auf der Website und in den Sozialen Medien des Vereins veröffentlicht werden dürfen (freiwillig, jederzeit widerrufbar).</span></label>
+          <label>Anmerkungen<textarea name="message" rows="4" placeholder="Gesundheitliche Hinweise, Vorerfahrung, Fragen"></textarea></label>
+        </fieldset>
+
+        <button class="btn" type="submit">Antrag absenden <span class="arr">→</span></button>
+        <p class="form-note" id="antragNote" role="status"></p>
+        <p class="fs-hint">* Pflichtfeld. Nach dem Absenden prüft der Vorstand den Antrag und meldet sich bei dir.</p>
+      </form>
+
+      <aside class="factbox">
+        <h4>So geht es weiter</h4>
+        <div class="fact"><dt>1. Antrag</dt><dd>Formular ausfüllen und absenden</dd></div>
+        <div class="fact"><dt>2. Prüfung</dt><dd>Der Vorstand prüft den Antrag</dd></div>
+        <div class="fact"><dt>3. Bestätigung</dt><dd>Du bekommst eine Rückmeldung per E-Mail</dd></div>
+        <div class="fact"><dt>Fragen?</dt><dd><a href="mailto:${esc(st.email)}">${esc(st.email)}</a></dd></div>
+        <div class="fact"><dt>Lieber Papier?</dt><dd><a href="#/dokumente">Antrag als PDF</a></dd></div>
+        <div class="fact"><dt>Erst testen?</dt><dd><a href="#/kontakt">Probetraining anfragen</a></dd></div>
+      </aside>
+    </div></section>`;
+  }
+
   function staticPage(slug) {
     const p = C.pages[slug];
     if (!p) return notFound();
@@ -586,6 +679,7 @@
       case 'faq': html = faq(); break;
       case 'dokumente': html = dokumente(); break;
       case 'kontakt': html = kontakt(query); break;
+      case 'mitglied-werden': html = antrag(query); break;
       case 'impressum': html = staticPage('impressum'); break;
       case 'datenschutz': html = staticPage('datenschutz'); break;
       default: html = notFound();
@@ -597,6 +691,7 @@
     window.scrollTo(0, 0);
     wireImages(root);
     wireForm();
+    wireAntrag();
   }
 
   function wireForm() {
@@ -646,6 +741,83 @@
     if (!DB || !DB.configured) return;
     const remote = await DB.fetchContent();
     if (remote) { S.save(remote); }
+  }
+
+  function wireAntrag() {
+    const f = document.getElementById('antragForm');
+    if (!f) return;
+    const dept = document.getElementById('aDept');
+    const teamWrap = document.getElementById('aTeamWrap');
+    dept.addEventListener('change', () => {
+      const show = dept.value === 'Fußball';
+      teamWrap.hidden = !show;
+      if (!show) teamWrap.querySelector('select').value = '';
+    });
+
+    const minor = document.getElementById('aMinor');
+    const gd = f.querySelector('[name="geburtsdatum"]');
+    const pruefeAlter = () => {
+      if (!gd.value) { minor.hidden = true; return; }
+      const g = new Date(gd.value), heute = new Date();
+      let alter = heute.getFullYear() - g.getFullYear();
+      const m = heute.getMonth() - g.getMonth();
+      if (m < 0 || (m === 0 && heute.getDate() < g.getDate())) alter--;
+      minor.hidden = alter >= 18;
+      minor.querySelectorAll('[name="ebName"], [name="ebTelefon"]').forEach((i) => { i.required = alter < 18; });
+    };
+    gd.addEventListener('change', pruefeAlter);
+    pruefeAlter();
+
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const note = document.getElementById('antragNote');
+      const d = Object.fromEntries(new FormData(f).entries());
+      const fehlt = [];
+      [['dept', 'Abteilung'], ['vorname', 'Vorname'], ['nachname', 'Nachname'], ['geburtsdatum', 'Geburtsdatum'],
+       ['strasse', 'Straße'], ['plzOrt', 'PLZ und Ort'], ['email', 'E-Mail'], ['telefon', 'Telefon'],
+       ['ktoInhaber', 'Kontoinhaber'], ['iban', 'IBAN']].forEach(([k, l]) => { if (!d[k]) fehlt.push(l); });
+      if (!d.sepa) fehlt.push('SEPA-Mandat');
+      if (!d.satzung) fehlt.push('Satzung anerkennen');
+      if (!d.privacy) fehlt.push('Datenschutz');
+      if (!minor.hidden) { if (!d.ebName) fehlt.push('Name Erziehungsberechtigte(r)'); if (!d.ebTelefon) fehlt.push('Telefon Erziehungsberechtigte(r)'); }
+      if (fehlt.length) {
+        note.textContent = 'Bitte noch ausfüllen: ' + fehlt.join(', ');
+        note.className = 'form-note err';
+        return;
+      }
+
+      const payload = {
+        'Abteilung': d.dept, 'Mannschaft': d.team || '', 'Beginn': d.beginn || '',
+        'Vorname': d.vorname, 'Nachname': d.nachname, 'Geburtsdatum': d.geburtsdatum,
+        'Geschlecht': d.geschlecht || '', 'Straße': d.strasse, 'PLZ und Ort': d.plzOrt,
+        'Staatsangehörigkeit': d.staat || '',
+        'Erziehungsberechtigte(r)': d.ebName || '', 'Telefon EB': d.ebTelefon || '', 'E-Mail EB': d.ebEmail || '',
+        'Kontoinhaber': d.ktoInhaber, 'IBAN': d.iban, 'BIC': d.bic || '', 'Kreditinstitut': d.bank || '',
+        'SEPA-Mandat': 'erteilt', 'Satzung anerkannt': 'ja',
+        'Fotoeinwilligung': d.fotos ? 'ja' : 'nein'
+      };
+      const eintrag = {
+        type: 'Mitgliedsantrag', dept: d.dept, team: d.team || '',
+        name: d.vorname + ' ' + d.nachname, birth: d.geburtsdatum,
+        email: d.email, phone: d.telefon, message: d.message || '', payload: payload
+      };
+
+      const DB = window.OSGDB;
+      note.textContent = 'Antrag wird gesendet...';
+      note.className = 'form-note';
+      const fertig = () => {
+        f.reset();
+        document.getElementById('aMinor').hidden = true;
+        note.textContent = 'Danke! Dein Aufnahmeantrag ist eingegangen. Der Vorstand prüft ihn und meldet sich per E-Mail bei dir.';
+        note.className = 'form-note ok';
+      };
+      if (DB && DB.configured) {
+        DB.addSubmission(eintrag).then((res) => {
+          if (res.ok) fertig();
+          else { note.textContent = 'Senden hat nicht funktioniert. Bitte schreib uns direkt per E-Mail.'; note.className = 'form-note err'; }
+        });
+      } else { S.addSubmission(eintrag); fertig(); }
+    });
   }
 
   window.addEventListener('hashchange', render);
