@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ÖSG Viktoria 08 e.V. Dortmund — Vier Abteilungen. Ein Verein.</title>
+<meta name="description" content="Östliche Sportgemeinschaft Viktoria 08 e.V. Dortmund, seit 1908. Fußball, Boxen, Tischtennis und Gymnastik in Dortmund-Körne." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Anton&family=Archivo:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body data-palette="rotblau" data-headline="oswald">
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#/" aria-label="ÖSG Viktoria 08 — Startseite">
+      <span class="crest" aria-hidden="true"><b>ÖSG</b><small>08</small></span>
+      <span class="brand-name"><b>Viktoria 08</b><span>Östliche SG · Dortmund</span></span>
+    </a>
+    <nav class="nav" id="siteNav" aria-label="Hauptnavigation"></nav>
+    <div class="header-cta">
+      <a class="btn" href="#/kontakt">Mitglied werden</a>
+      <button class="burger" id="burger" aria-label="Menü öffnen"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu__top">
+    <span class="brand-name"><b>Viktoria 08</b></span>
+    <button class="close" id="closeMenu" aria-label="Menü schließen">×</button>
+  </div>
+  <nav id="mobileNav"></nav>
+</div>
+<main id="app"></main>
+<footer class="site-footer" id="footerRoot"></footer>
+<script>
+  const mm = document.getElementById('mobileMenu');
+  document.getElementById('burger').addEventListener('click', () => mm.classList.add('open'));
+  document.getElementById('closeMenu').addEventListener('click', () => mm.classList.remove('open'));
+  mm.addEventListener('click', (e) => { if (e.target.tagName === 'A') mm.classList.remove('open'); });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="supabase-config.js"></script>
+<script src="db.js"></script>
+<script src="content.js"></script>
+<script src="site.js"></script>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#15327f"/>
+    <polygon points="50,20 72,20 72,58 50,72 28,58 28,20" fill="#d81f2a"/>
+    <text x="50" y="48" font-family="Oswald,Arial" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">ÖSG</text>
+    <text x="50" y="62" font-family="Oswald,Arial" font-size="9" fill="#fff" text-anchor="middle">08</text>
+  </svg>
+</template>
+</body>
+</html>
