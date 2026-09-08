@@ -384,16 +384,21 @@
     if (!canEdit()) return false;
     if (isAdminRole() || unscoped()) return true;
     const s = myScope();
-    if (key === 'teams') return s.teams.indexOf(x.name) >= 0;
-    if (key === 'depts') return s.depts.indexOf(x.name) >= 0;
-    if (key === 'news' || key === 'events') return s.depts.indexOf(x.category) >= 0;
+    if (key === 'teams') return s.teams.indexOf(x.slug || x.id) >= 0;
+    if (key === 'depts') return s.depts.indexOf(x.slug) >= 0;
+    if (key === 'news' || key === 'events') {
+      const dep = C.depts.find((d) => d.name === x.category);
+      return !!dep && s.depts.indexOf(dep.slug) >= 0;
+    }
     if (key === 'gallery') return true;
     return false;
   };
   const scopeText = () => {
     const s = myScope();
     if (unscoped()) return 'alle Bereiche';
-    return [s.depts.join(', '), s.teams.join(', ')].filter(Boolean).join(' · ');
+    const dn = s.depts.map((x) => { const d = C.depts.find((y) => y.slug === x); return d ? d.name : x; });
+    const tn = s.teams.map((x) => { const t = C.teams.find((y) => (y.slug || y.id) === x); return t ? t.name : x; });
+    return [dn.join(', '), tn.join(', ')].filter(Boolean).join(' · ');
   };
   const isAdminRole = () => {
     const DB = window.OSGDB;
@@ -467,9 +472,9 @@
     }
     const sd = (p.scope_depts || []), st = (p.scope_teams || []);
     return `<div class="field"><label>Zuständig für Abteilungen</label>
-        <div class="chips">${C.depts.map((d) => `<label class="chip"><input type="checkbox" name="scope_depts" value="${esc(d.name)}"${sd.indexOf(d.name) >= 0 ? ' checked' : ''} /> ${esc(d.name)}</label>`).join('')}</div></div>
+        <div class="chips">${C.depts.map((d) => `<label class="chip"><input type="checkbox" name="scope_depts" value="${esc(d.slug)}"${sd.indexOf(d.slug) >= 0 ? ' checked' : ''} /> ${esc(d.name)}</label>`).join('')}</div></div>
       <div class="field"><label>Zuständig für Mannschaften</label>
-        <div class="chips">${C.teams.map((t) => `<label class="chip"><input type="checkbox" name="scope_teams" value="${esc(t.name)}"${st.indexOf(t.name) >= 0 ? ' checked' : ''} /> ${esc(t.name)}</label>`).join('')}</div>
+        <div class="chips">${C.teams.map((t) => `<label class="chip"><input type="checkbox" name="scope_teams" value="${esc(t.slug || t.id)}"${st.indexOf(t.slug || t.id) >= 0 ? ' checked' : ''} /> ${esc(t.name)}</label>`).join('')}</div>
         <small>Nichts angehakt bedeutet: zuständig für alles. Mit Auswahl darf die Person nur diese Bereiche bearbeiten, alles andere nur ansehen.</small></div>`;
   }
 
@@ -581,20 +586,21 @@
   /* ---------- Interner Abteilungsbereich ---------- */
   let internRows = { members: [], internal_docs: [], tasks: [] };
   let internDept = '';
+  let internTeam = '';
 
   const INTERN = {
     mitglieder: {
       table: 'members', label: 'Mitglieder', unit: 'Mitglieder', add: 'Neues Mitglied', order: 'last_name',
       cols: [
         { h: 'Name', r: (x) => `<span class="t-title">${esc(x.last_name)}, ${esc(x.first_name)}</span><span class="t-sub">${esc(x.email || '')}${x.phone ? ' · ' + esc(x.phone) : ''}</span>` },
-        { h: 'Mannschaft', r: (x) => esc(x.team || '—') },
+        { h: 'Mannschaft', r: (x) => x.team ? esc(teamName(x.team)) : '<span class="t-sub">abteilungsweit</span>' },
         { h: 'Geburtsdatum', r: (x) => x.birthdate ? dt(x.birthdate) : '—' },
         { h: 'Mitglied seit', r: (x) => x.member_since ? dt(x.member_since) : '—' },
         { h: 'Status', r: (x) => `<span class="pill ${x.status === 'aktiv' ? 'angenommen' : x.status === 'ausgetreten' ? 'abgelehnt' : 'wartet'}">${esc(x.status)}</span>` }
       ],
       fields: [
         { k: 'first_name', l: 'Vorname', t: 'text' }, { k: 'last_name', l: 'Nachname', t: 'text' },
-        { k: 'team', l: 'Mannschaft / Gruppe', t: 'text' }, { k: 'birthdate', l: 'Geburtsdatum', t: 'date' },
+        { k: 'birthdate', l: 'Geburtsdatum', t: 'date' },
         { k: 'email', l: 'E-Mail', t: 'text' }, { k: 'phone', l: 'Telefon', t: 'text' },
         { k: 'address', l: 'Adresse', t: 'text' }, { k: 'member_since', l: 'Mitglied seit', t: 'date' },
         { k: 'status', l: 'Status', t: 'select', o: ['aktiv', 'passiv', 'ausgetreten'] },
@@ -606,7 +612,11 @@
       cols: [
         { h: 'Titel', r: (x) => `<span class="t-title">${esc(x.title)}</span><span class="t-sub">${esc(x.note || '')}</span>` },
         { h: 'Kategorie', r: (x) => `<span class="pill">${esc(x.category || 'Sonstiges')}</span>` },
-        { h: 'Datei', r: (x) => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">öffnen</a>` : '—' },
+        { h: 'Mannschaft', r: (x) => x.team ? esc(teamName(x.team)) : '<span class="t-sub">abteilungsweit</span>' },
+        { h: 'Datei', r: (x) => !x.url ? '—'
+          : String(x.url).indexOf('intern:') === 0
+            ? `<button class="btn sm ghost" data-open="${esc(x.url)}">öffnen</button>`
+            : `<a href="${esc(x.url)}" target="_blank" rel="noopener">öffnen</a>` },
         { h: 'Angelegt', r: (x) => dt(x.created_at) }
       ],
       fields: [
@@ -619,6 +629,7 @@
       table: 'tasks', label: 'Aufgaben', unit: 'Aufgaben', add: 'Neue Aufgabe', order: 'due_date',
       cols: [
         { h: 'Aufgabe', r: (x) => `<span class="t-title">${esc(x.title)}</span><span class="t-sub">${esc(String(x.description || '').slice(0, 70))}</span>` },
+        { h: 'Mannschaft', r: (x) => x.team ? esc(teamName(x.team)) : '<span class="t-sub">abteilungsweit</span>' },
         { h: 'Zuständig', r: (x) => esc(x.assignee || '—') },
         { h: 'Fällig', r: (x) => x.due_date ? dt(x.due_date) : '—' },
         { h: 'Status', r: (x) => `<span class="pill ${x.status === 'erledigt' ? 'angenommen' : x.status === 'in Arbeit' ? 'wartet' : 'neu'}">${esc(x.status)}</span>` }
@@ -632,9 +643,28 @@
     }
   };
 
+  const deptName = (slug) => { const d = C.depts.find((x) => x.slug === slug); return d ? d.name : slug; };
+  const teamName = (slug) => { const t = C.teams.find((x) => (x.slug || x.id) === slug); return t ? t.name : slug; };
+  const teamDeptSlug = (t) => { const d = C.depts.find((x) => x.name === t.dept); return d ? d.slug : ''; };
+
+  /* Abteilungen, die dieser Zugang sehen darf, inklusive der Abteilungen eigener Mannschaften */
   const meineDepts = () => {
     const s = myScope();
-    return (isAdminRole() || unscoped()) ? C.depts.map((d) => d.name) : s.depts;
+    if (isAdminRole() || unscoped()) return C.depts.map((d) => d.slug);
+    const ausTeams = C.teams.filter((t) => s.teams.indexOf(t.slug || t.id) >= 0).map(teamDeptSlug);
+    return [...new Set(s.depts.concat(ausTeams).filter(Boolean))];
+  };
+  /* Mannschaften einer Abteilung, die dieser Zugang bearbeiten darf */
+  const meineTeams = (deptSlug) => {
+    const s = myScope();
+    const inDept = C.teams.filter((t) => teamDeptSlug(t) === deptSlug);
+    if (isAdminRole() || unscoped() || s.depts.indexOf(deptSlug) >= 0) return inDept.map((t) => t.slug || t.id);
+    return inDept.filter((t) => s.teams.indexOf(t.slug || t.id) >= 0).map((t) => t.slug || t.id);
+  };
+  /* Darf der Zugang in dieser Abteilung auch abteilungsweite Einträge pflegen? */
+  const darfAbteilungsweit = (deptSlug) => {
+    const s = myScope();
+    return isAdminRole() || unscoped() || s.depts.indexOf(deptSlug) >= 0;
   };
 
   function internView(key) {
@@ -647,16 +677,33 @@
       return `<div class="head"><div><h1>${cfg.label}</h1><p>Noch nicht eingerichtet. Bitte <b>supabase-abteilungen.sql</b> im Supabase SQL Editor ausführen.</p></div></div>`;
     }
     const depts = meineDepts();
-    if (!internDept) internDept = depts[0] || '';
-    const rows = (internRows[cfg.table] || []).filter((x) => x.dept === internDept);
-    const darf = canEdit() && depts.indexOf(internDept) >= 0;
+    if (!internDept || depts.indexOf(internDept) < 0) internDept = depts[0] || '';
+    const teams = meineTeams(internDept);
+    const abteilungsweit = darfAbteilungsweit(internDept);
+    if (internTeam && internTeam !== '__alle' && teams.indexOf(internTeam) < 0) internTeam = '';
+    if (abteilungsweit && internTeam === '') internTeam = '__alle';
+    if (!abteilungsweit) {
+      if (internTeam === '__alle' || !internTeam) internTeam = teams[0] || '';
+    }
+    const rows = (internRows[cfg.table] || []).filter((x) => {
+      if (x.dept !== internDept) return false;
+      if (internTeam === '__alle') return true;
+      if (internTeam) return (x.team || '') === internTeam;
+      return !x.team;
+    });
+    const darf = canEdit() && (abteilungsweit || (internTeam && teams.indexOf(internTeam) >= 0));
     const body = rows.map((x) => `<tr>${cfg.cols.map((c) => `<td>${c.r(x)}</td>`).join('')}
       <td class="actions">${darf ? `<button class="btn sm ghost" data-iedit="${x.id}">Bearbeiten</button>
         <button class="btn sm danger" data-idel="${x.id}">Löschen</button>` : '<span class="t-sub">nur lesen</span>'}</td></tr>`).join('');
     return `<div class="head">
-        <div><h1>${cfg.label}</h1><p>${rows.length} ${cfg.unit} in ${esc(internDept || 'keiner Abteilung')} · nur intern, nicht auf der Website</p></div>
+        <div><h1>${cfg.label}</h1><p>${rows.length} ${cfg.unit} · ${esc(deptName(internDept) || 'keine Abteilung')}${internTeam === '__alle' ? ', alle Mannschaften' : internTeam ? ', ' + esc(teamName(internTeam)) : ', abteilungsweit'} · nur intern, nicht auf der Website</p></div>
         <div style="display:flex;gap:10px;align-items:center">
-          <select id="deptPick" class="deptpick">${depts.map((d) => `<option${d === internDept ? ' selected' : ''}>${esc(d)}</option>`).join('')}</select>
+          <select id="deptPick" class="deptpick">${depts.map((d) => `<option value="${esc(d)}"${d === internDept ? ' selected' : ''}>${esc(deptName(d))}</option>`).join('')}</select>
+          <select id="teamPick" class="deptpick">
+            ${abteilungsweit ? `<option value="__alle"${internTeam === '__alle' ? ' selected' : ''}>Alle Mannschaften</option>
+            <option value=""${internTeam === '' ? ' selected' : ''}>Abteilung allgemein</option>` : ''}
+            ${teams.map((t) => `<option value="${esc(t)}"${t === internTeam ? ' selected' : ''}>${esc(teamName(t))}</option>`).join('')}
+          </select>
           ${darf ? `<button class="btn" id="internAdd">+ ${cfg.add}</button>` : ''}
         </div>
       </div>
@@ -676,13 +723,18 @@
     }).join('');
     openModal(isNew ? cfg.add : cfg.label + ' bearbeiten',
       `<form id="internForm"><div class="grid2">${f()}</div>
-        <p class="t-sub">Abteilung: <b>${esc(internDept)}</b>. Diese Daten sind nur im Admin-Bereich sichtbar.</p></form>`,
+        <div class="field"><label>Mannschaft</label><select name="__team">
+          ${darfAbteilungsweit(internDept) ? `<option value=""${!(x.team || (internTeam !== '__alle' ? internTeam : '')) ? ' selected' : ''}>Abteilung allgemein</option>` : ''}
+          ${meineTeams(internDept).map((t) => { const sel = (x.team || (internTeam !== '__alle' ? internTeam : '')) === t; return `<option value="${esc(t)}"${sel ? ' selected' : ''}>${esc(teamName(t))}</option>`; }).join('')}
+        </select></div>
+        <p class="t-sub">Abteilung: <b>${esc(deptName(internDept))}</b>. Diese Daten liegen nur im Admin-Bereich, Dateien in einem privaten Speicher mit zeitlich begrenzten Links.</p></form>`,
       '<button class="btn ghost" type="button" id="mCancel">Abbrechen</button><button class="btn" type="button" id="mSave">Speichern</button>');
     el('mCancel').addEventListener('click', closeModal);
     wireUploads('internForm', 'intern/' + cfg.table);
     el('mSave').addEventListener('click', async () => {
       const fd = new FormData(el('internForm'));
-      const patch = { dept: internDept };
+      const gewaehlt = String(fd.get('__team') || '');
+      const patch = { dept: internDept, team: gewaehlt || null };
       cfg.fields.forEach((fl) => {
         const v = String(fd.get(fl.k) == null ? '' : fd.get(fl.k));
         patch[fl.k] = (fl.t === 'date' && !v) ? null : v;
@@ -775,7 +827,8 @@
         const target = form.querySelector('[name="' + inp.dataset.up + '"]');
         const hint = inp.parentElement.querySelector('small');
         hint.textContent = 'Wird hochgeladen...';
-        const res = await window.OSGDB.upload(file, folder);
+        const privat = String(folder || '').indexOf('intern') === 0;
+        const res = await window.OSGDB.upload(file, folder, privat ? 'intern' : null);
         if (res.ok) { target.value = res.url; hint.textContent = 'Hochgeladen'; }
         else hint.textContent = 'Upload fehlgeschlagen: ' + res.error;
       });
@@ -920,9 +973,16 @@
     if (INTERN[view]) {
       const cfg = INTERN[view];
       const dp = el('deptPick');
-      if (dp) dp.addEventListener('change', () => { internDept = dp.value; render(); });
+      if (dp) dp.addEventListener('change', () => { internDept = dp.value; internTeam = darfAbteilungsweit(dp.value) ? '__alle' : ''; render(); });
+      const tp = el('teamPick');
+      if (tp) tp.addEventListener('change', () => { internTeam = tp.value; render(); });
       const ia = el('internAdd');
       if (ia) ia.addEventListener('click', () => internEdit(view, null));
+      c.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', async () => {
+        const res = await window.OSGDB.signedUrl(b.dataset.open, 3600);
+        if (!res.ok) { toast('Link konnte nicht erzeugt werden: ' + res.error); return; }
+        window.open(res.url, '_blank', 'noopener');
+      }));
       c.querySelectorAll('[data-iedit]').forEach((b) => b.addEventListener('click', () => internEdit(view, (internRows[cfg.table] || []).find((x) => x.id === b.dataset.iedit))));
       c.querySelectorAll('[data-idel]').forEach((b) => b.addEventListener('click', async () => {
         if (!confirm('Eintrag wirklich löschen?')) return;
@@ -956,8 +1016,8 @@
         // Gewünschte Bereiche übernehmen, soweit sie zu Abteilungen und Mannschaften passen
         if (hasScope() && r.wish_scope && r.wish_scope !== 'alle Bereiche') {
           const teile = String(r.wish_scope).split(',').map((x) => x.trim());
-          patch.scope_depts = C.depts.map((d) => d.name).filter((n) => teile.indexOf(n) >= 0);
-          patch.scope_teams = C.teams.map((t) => t.name).filter((n) => teile.indexOf(n) >= 0);
+          patch.scope_depts = C.depts.filter((d) => teile.indexOf(d.name) >= 0).map((d) => d.slug);
+          patch.scope_teams = C.teams.filter((t) => teile.indexOf(t.name) >= 0).map((t) => t.slug || t.id);
         } else if (hasScope() && r.wish_scope === 'alle Bereiche') {
           patch.scope_depts = []; patch.scope_teams = [];
         }
