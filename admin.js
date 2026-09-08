@@ -128,7 +128,7 @@
     ['dashboard', 'Dashboard'], ['anfragen', 'Anfragen'], ['news', 'News'], ['events', 'Termine'],
     ['teams', 'Mannschaften'], ['depts', 'Abteilungen'], ['gallery', 'Galerie'], ['docs', 'Dokumente'],
     ['pages', 'Seiteninhalte'], ['faq', 'FAQ'], ['partners', 'Partner'], ['people', 'Ansprechpartner'],
-    ['mitglieder', 'Mitglieder'], ['intern', 'Interne Ablage'], ['aufgaben', 'Aufgaben'],
+    ['mitglieder', 'Mitglieder'], ['intern', 'Interne Ablage'], ['aufgaben', 'Aufgaben'], ['kalender', 'Kalender'],
     ['zugaenge', 'Zugänge'], ['meinerechte', 'Meine Rechte'], ['settings', 'Einstellungen']
   ];
 
@@ -638,6 +638,7 @@
         { k: 'title', l: 'Aufgabe', t: 'text' }, { k: 'assignee', l: 'Zuständig', t: 'text' },
         { k: 'due_date', l: 'Fällig bis', t: 'date' },
         { k: 'status', l: 'Status', t: 'select', o: ['offen', 'in Arbeit', 'erledigt'] },
+        { k: 'priority', l: 'Priorität', t: 'select', o: ['normal', 'hoch', 'dringend'] },
         { k: 'description', l: 'Beschreibung', t: 'area' }
       ]
     }
@@ -704,10 +705,13 @@
             <option value=""${internTeam === '' ? ' selected' : ''}>Abteilung allgemein</option>` : ''}
             ${teams.map((t) => `<option value="${esc(t)}"${t === internTeam ? ' selected' : ''}>${esc(teamName(t))}</option>`).join('')}
           </select>
+          ${key === 'aufgaben' ? `<button class="btn ghost" id="modeToggle">${boardMode === 'board' ? 'Als Liste' : 'Als Board'}</button>` : ''}
           ${darf ? `<button class="btn" id="internAdd">+ ${cfg.add}</button>` : ''}
         </div>
       </div>
-      <div class="card">${rows.length ? table(cfg.cols.map((c) => c.h).concat(['']), body) : '<div class="empty">Noch keine Einträge in dieser Abteilung.</div>'}</div>`;
+      ${key === 'aufgaben' && boardMode === 'board'
+        ? taskBoard(rows, darf)
+        : `<div class="card">${rows.length ? table(cfg.cols.map((c) => c.h).concat(['']), body) : '<div class="empty">Noch keine Einträge in dieser Abteilung.</div>'}</div>`}`;
   }
 
   function internEdit(key, row) {
@@ -746,6 +750,97 @@
       internRows[cfg.table] = (await window.OSGDB.rows(cfg.table, cfg.order)) || internRows[cfg.table];
       closeModal(); render(); toast('Gespeichert');
     });
+  }
+
+  /* ---------- Aufgaben-Board ---------- */
+  let boardMode = 'board';
+  const SPALTEN = ['offen', 'in Arbeit', 'erledigt'];
+
+  function taskBoard(rows, darf) {
+    const karte = (t) => `<article class="tcard${t.priority === 'dringend' ? ' tcard--rot' : t.priority === 'hoch' ? ' tcard--gelb' : ''}"
+        draggable="${darf ? 'true' : 'false'}" data-task="${t.id}">
+      <strong>${esc(t.title)}</strong>
+      ${t.description ? `<p>${esc(String(t.description).slice(0, 120))}</p>` : ''}
+      <div class="tcard__meta">
+        ${t.assignee ? `<span class="pill">${esc(t.assignee)}</span>` : ''}
+        ${t.team ? `<span class="pill">${esc(teamName(t.team))}</span>` : ''}
+        ${t.due_date ? `<span class="pill ${new Date(t.due_date) < new Date() && t.status !== 'erledigt' ? 'neu' : 'wartet'}">${dt(t.due_date)}</span>` : ''}
+      </div>
+      ${darf ? `<div class="tcard__act">
+        <button class="btn sm ghost" data-iedit="${t.id}">Bearbeiten</button>
+        ${SPALTEN.filter((s) => s !== t.status).map((s) => `<button class="btn sm ghost" data-move="${t.id}" data-to="${esc(s)}">→ ${esc(s)}</button>`).join('')}
+      </div>` : ''}
+    </article>`;
+
+    return `<div class="board">${SPALTEN.map((s) => {
+      const inSpalte = rows.filter((t) => (t.status || 'offen') === s);
+      return `<section class="bcol" data-col="${esc(s)}">
+        <header><b>${esc(s)}</b><span>${inSpalte.length}</span></header>
+        <div class="bcol__body">${inSpalte.map(karte).join('') || '<p class="bcol__leer">keine Aufgaben</p>'}</div>
+      </section>`;
+    }).join('')}</div>`;
+  }
+
+  /* ---------- Terminkalender ---------- */
+  let calMonth = (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
+
+  function kalenderEintraege() {
+    const list = [];
+    (C.events || []).forEach((e) => list.push({ date: e.date, time: e.time, title: e.title, art: 'Termin', extra: e.place || '' }));
+    (C.teams || []).forEach((t) => (t.matches || []).forEach((m) => {
+      if (!m.date) return;
+      list.push({
+        date: m.date, time: m.time, art: 'Spiel', extra: t.name,
+        title: m.home === 'auswaerts' ? esc(m.opponent) + ' (A)' : esc(m.opponent) + ' (H)'
+      });
+    }));
+    (internRows.tasks || []).forEach((t) => {
+      if (!t.due_date || t.status === 'erledigt') return;
+      list.push({ date: t.due_date, time: '', art: 'Aufgabe', title: t.title, extra: t.assignee || '' });
+    });
+    return list;
+  }
+
+  function kalender() {
+    const eintraege = kalenderEintraege();
+    const erster = new Date(calMonth.y, calMonth.m, 1);
+    const tage = new Date(calMonth.y, calMonth.m + 1, 0).getDate();
+    const start = (erster.getDay() + 6) % 7;
+    const monatsName = erster.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    const zellen = [];
+    for (let i = 0; i < start; i++) zellen.push('<div class="cday cday--leer"></div>');
+    for (let d = 1; d <= tage; d++) {
+      const iso = calMonth.y + '-' + String(calMonth.m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const heute = iso === new Date().toISOString().slice(0, 10);
+      const drin = eintraege.filter((x) => String(x.date).slice(0, 10) === iso);
+      zellen.push(`<div class="cday${heute ? ' cday--heute' : ''}">
+        <span class="cday__nr">${d}</span>
+        ${drin.map((x) => `<span class="cev cev--${x.art === 'Spiel' ? 'spiel' : x.art === 'Aufgabe' ? 'aufgabe' : 'termin'}" title="${esc(x.art + ': ' + x.title + (x.extra ? ' · ' + x.extra : ''))}">
+          ${x.time ? esc(x.time) + ' ' : ''}${esc(x.title)}</span>`).join('')}
+      </div>`);
+    }
+    const kommend = eintraege.filter((x) => String(x.date) >= new Date().toISOString().slice(0, 10))
+      .sort((a2, b2) => String(a2.date).localeCompare(String(b2.date))).slice(0, 8);
+    return `<div class="head">
+        <div><h1>Terminkalender</h1><p>Termine, Spiele und Aufgabenfristen an einem Ort</p></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn ghost sm" id="calPrev">←</button>
+          <b style="min-width:170px;text-align:center">${esc(monatsName)}</b>
+          <button class="btn ghost sm" id="calNext">→</button>
+          <button class="btn ghost sm" id="calToday">Heute</button>
+        </div>
+      </div>
+      <div class="card" style="padding:18px">
+        <div class="cgrid cgrid--head">${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((t) => `<div>${t}</div>`).join('')}</div>
+        <div class="cgrid">${zellen.join('')}</div>
+        <div class="clegend"><span class="cev cev--termin">Termin</span><span class="cev cev--spiel">Spiel</span><span class="cev cev--aufgabe">Aufgabe</span></div>
+      </div>
+      <h4 class="group-title" style="margin-top:26px">Als Nächstes</h4>
+      <div class="card">${kommend.length ? table(['Datum', 'Art', 'Was', 'Wer / Wo'], kommend.map((x) => `<tr>
+        <td>${dt(x.date)}${x.time ? ' · ' + esc(x.time) : ''}</td>
+        <td><span class="pill">${esc(x.art)}</span></td>
+        <td><span class="t-title">${esc(x.title)}</span></td>
+        <td>${esc(x.extra || '')}</td></tr>`).join('')) : '<div class="empty">Keine kommenden Einträge.</div>'}</div>`;
   }
 
   /* ---------- Kader und Spielplan ---------- */
@@ -948,6 +1043,7 @@
     else if (view === 'settings') c.innerHTML = settings();
     else if (view === 'zugaenge') c.innerHTML = zugaenge();
     else if (view === 'meinerechte') c.innerHTML = meineRechte();
+    else if (view === 'kalender') c.innerHTML = kalender();
     else if (INTERN[view]) c.innerHTML = internView(view);
     else if (COLLECTIONS[view]) c.innerHTML = collection(COLLECTIONS[view]);
     else { view = 'dashboard'; c.innerHTML = dashboard(); }
@@ -974,6 +1070,31 @@
       const cfg = INTERN[view];
       const dp = el('deptPick');
       if (dp) dp.addEventListener('change', () => { internDept = dp.value; internTeam = darfAbteilungsweit(dp.value) ? '__alle' : ''; render(); });
+      const mt = el('modeToggle');
+      if (mt) mt.addEventListener('click', () => { boardMode = boardMode === 'board' ? 'liste' : 'board'; render(); });
+      c.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', async () => {
+        const res = await window.OSGDB.updateRow('tasks', b.dataset.move, { status: b.dataset.to });
+        if (!res.ok) { toast('Fehler: ' + res.error); return; }
+        internRows.tasks = (await window.OSGDB.rows('tasks', 'due_date')) || internRows.tasks;
+        render(); toast('Verschoben nach ' + b.dataset.to);
+      }));
+      c.querySelectorAll('[data-task]').forEach((card) => {
+        card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.task); card.classList.add('drag'); });
+        card.addEventListener('dragend', () => card.classList.remove('drag'));
+      });
+      c.querySelectorAll('[data-col]').forEach((col) => {
+        col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
+        col.addEventListener('dragleave', () => col.classList.remove('over'));
+        col.addEventListener('drop', async (e) => {
+          e.preventDefault(); col.classList.remove('over');
+          const id = e.dataTransfer.getData('text/plain');
+          const res = await window.OSGDB.updateRow('tasks', id, { status: col.dataset.col });
+          if (!res.ok) { toast('Fehler: ' + res.error); return; }
+          internRows.tasks = (await window.OSGDB.rows('tasks', 'due_date')) || internRows.tasks;
+          render(); toast('Verschoben nach ' + col.dataset.col);
+        });
+      });
+
       const tp = el('teamPick');
       if (tp) tp.addEventListener('change', () => { internTeam = tp.value; render(); });
       const ia = el('internAdd');
@@ -991,6 +1112,12 @@
         internRows[cfg.table] = (await window.OSGDB.rows(cfg.table, cfg.order)) || [];
         render(); toast('Gelöscht');
       }));
+    }
+
+    if (view === 'kalender') {
+      el('calPrev').addEventListener('click', () => { calMonth.m--; if (calMonth.m < 0) { calMonth.m = 11; calMonth.y--; } render(); });
+      el('calNext').addEventListener('click', () => { calMonth.m++; if (calMonth.m > 11) { calMonth.m = 0; calMonth.y++; } render(); });
+      el('calToday').addEventListener('click', () => { const d = new Date(); calMonth = { y: d.getFullYear(), m: d.getMonth() }; render(); });
     }
 
     const rf = el('reqForm');

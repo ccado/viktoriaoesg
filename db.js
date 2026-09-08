@@ -212,14 +212,27 @@
     },
 
     /* ----- Dateien ----- */
-    async upload(file, folder) {
+    async upload(file, folder, bucket) {
       if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const eimer = bucket || DB.bucket;
       const safe = String(file.name).toLowerCase().replace(/[^a-z0-9.\-_]/g, '-');
       const path = (folder || 'allgemein') + '/' + Date.now() + '-' + safe;
-      const { error } = await client.storage.from(DB.bucket).upload(path, file, { cacheControl: '3600', upsert: false });
+      const { error } = await client.storage.from(eimer).upload(path, file, { cacheControl: '3600', upsert: false });
       if (error) return { ok: false, error: error.message };
-      const { data } = client.storage.from(DB.bucket).getPublicUrl(path);
-      return { ok: true, url: data.publicUrl };
+      if (eimer === 'intern') {
+        // Privater Bucket: nur den Pfad merken, Links werden bei Bedarf signiert
+        return { ok: true, url: 'intern:' + path, path: path, privat: true };
+      }
+      const { data } = client.storage.from(eimer).getPublicUrl(path);
+      return { ok: true, url: data.publicUrl, path: path };
+    },
+
+    /* Zeitlich begrenzter Link auf eine interne Datei */
+    async signedUrl(path, sekunden) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const p = String(path).replace(/^intern:/, '');
+      const { data, error } = await client.storage.from('intern').createSignedUrl(p, sekunden || 3600);
+      return error ? { ok: false, error: error.message } : { ok: true, url: data.signedUrl };
     }
   };
 

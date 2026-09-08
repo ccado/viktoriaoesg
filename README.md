@@ -88,16 +88,22 @@ Oberadmin ist `djojananil@gmail.com`. Für `info@oesg08.de` liegt eine Admin-Ein
 
 Datei `supabase-abteilungen.sql` im SQL Editor ausführen (nach `supabase-zustaendigkeit.sql`).
 
-Drei neue Bereiche im Admin, jeweils mit Abteilungs-Auswahl oben rechts:
+Drei neue Bereiche im Admin, jeweils mit **Abteilungs- und Mannschaftsauswahl** oben rechts.
+Einträge können abteilungsweit gelten oder einer Mannschaft zugeordnet sein:
 - **Mitglieder**: Vor- und Nachname, Mannschaft, Geburtsdatum, Kontakt, Adresse, Mitglied seit,
   Status (aktiv, passiv, ausgetreten), Beitragshinweis, Notizen
 - **Interne Ablage**: Protokolle, Verträge, Anträge, Abrechnungen, Trainingsplanung, Sonstiges
 - **Aufgaben**: Titel, Zuständig, Fällig bis, Status, Beschreibung
 
+Dateien der internen Ablage liegen in einem **privaten** Speicher (`intern`) und werden nur
+über zeitlich begrenzte Links geöffnet, nicht über eine öffentliche Adresse.
+Die Abteilungszuordnung nutzt den Slug der Abteilung, Umbenennen des Namens ist daher gefahrlos.
+
 Diese Daten erscheinen **nicht** auf der Website. Der Zugriffsschutz läuft hier über die
-Datenbank: Wer als Zuständigkeit nur "Fußball" hat, sieht und bearbeitet ausschließlich
-Fußball-Datensätze, unabhängig von der Oberfläche. Admins und Zugänge ohne Einschränkung
-sehen alle Abteilungen.
+Datenbank: Wer als Zuständigkeit nur "Fußball" hat, sieht ausschließlich Fußball-Datensätze. Wer nur
+"F-Junioren" hat, sieht ausschließlich Datensätze dieser Mannschaft und keine
+abteilungsweiten. Das gilt unabhängig von der Oberfläche, die Datenbank prüft mit.
+Admins und Zugänge ohne Einschränkung sehen alles.
 
 Auch Formularanfragen sind so gefiltert: Ein Abteilungszugang sieht nur Anfragen seiner
 Abteilung, Admins sehen alle.
