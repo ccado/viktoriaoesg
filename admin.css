@@ -1,6 +1,7 @@
 /* ÖSG Viktoria 08 — Admin-Bereich */
 :root{--a-bg:#f5f7fa;--a-panel:#fff;--a-side:#1b2b45;--a-side-2:#16233a;--a-side-hi:#24395c;--a-ink:#16233a;--a-ink-soft:#5b6a80;--a-faint:#93a1b5;--a-line:#e4e9f0;--a-brand:#d81f2a;--a-accent:#15327f;--a-ok:#1a7f4b;--a-warn:#b26a00;--r:8px;--font:"Hanken Grotesk",system-ui,sans-serif;--disp:"Oswald","Arial Narrow",sans-serif}
 *,*::before,*::after{box-sizing:border-box}*{margin:0}
+[hidden]{display:none!important}
 body{font-family:var(--font);background:var(--a-bg);color:var(--a-ink);-webkit-font-smoothing:antialiased}
 button{font:inherit;cursor:pointer}
 a{color:var(--a-accent)}a:hover{color:var(--a-brand)}
