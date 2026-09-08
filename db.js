@@ -14,7 +14,7 @@
     configured,
     client,
     bucket: cfg.bucket || 'medien',
-    features: { scope: false, requests: false },
+    features: { scope: false, requests: false, intern: false },
 
     /* Prüft, welche Schema-Erweiterungen in der Datenbank vorhanden sind */
     async detect() {
@@ -23,6 +23,8 @@
       DB.features.scope = !a.error;
       const b = await client.from('rights_requests').select('id').limit(1);
       DB.features.requests = !b.error;
+      const c = await client.from('members').select('id').limit(1);
+      DB.features.intern = !c.error;
       return DB.features;
     },
 
@@ -182,6 +184,30 @@
     async resetPassword(email) {
       if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
       const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+
+    /* ----- Interne Tabellen (Mitglieder, Dokumente, Aufgaben) ----- */
+    async rows(table, orderBy) {
+      if (!configured) return null;
+      const { data, error } = await client.from(table).select('*').order(orderBy || 'created_at', { ascending: true });
+      if (error) { DB.features[table] = false; return null; }
+      DB.features[table] = true;
+      return data;
+    },
+    async addRow(table, row) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const { error } = await client.from(table).insert([row]);
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async updateRow(table, id, patch) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const { error } = await client.from(table).update(patch).eq('id', id);
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async removeRow(table, id) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const { error } = await client.from(table).delete().eq('id', id);
       return error ? { ok: false, error: error.message } : { ok: true };
     },
 

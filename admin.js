@@ -128,6 +128,7 @@
     ['dashboard', 'Dashboard'], ['anfragen', 'Anfragen'], ['news', 'News'], ['events', 'Termine'],
     ['teams', 'Mannschaften'], ['depts', 'Abteilungen'], ['gallery', 'Galerie'], ['docs', 'Dokumente'],
     ['pages', 'Seiteninhalte'], ['faq', 'FAQ'], ['partners', 'Partner'], ['people', 'Ansprechpartner'],
+    ['mitglieder', 'Mitglieder'], ['intern', 'Interne Ablage'], ['aufgaben', 'Aufgaben'],
     ['zugaenge', 'Zugänge'], ['meinerechte', 'Meine Rechte'], ['settings', 'Einstellungen']
   ];
 
@@ -491,8 +492,12 @@
       <form class="card" id="reqForm" style="padding:24px">
         <div class="grid2">
           <div class="field"><label>Gewünschte Rechtestufe</label><select name="wish_role">${Object.keys(ROLE_LABEL).map((r) => `<option value="${r}"${p.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
-          <div class="field"><label>Gewünschte Bereiche</label><input name="wish_scope" placeholder="z. B. F2-Junioren, News Jugend" /></div>
         </div>
+        <div class="field"><label>Gewünschte Abteilungen</label>
+          <div class="chips">${C.depts.map((d) => `<label class="chip"><input type="checkbox" name="wish_depts" value="${esc(d.name)}" /> ${esc(d.name)}</label>`).join('')}</div></div>
+        <div class="field"><label>Gewünschte Mannschaften</label>
+          <div class="chips">${C.teams.map((t) => `<label class="chip"><input type="checkbox" name="wish_teams" value="${esc(t.name)}" /> ${esc(t.name)}</label>`).join('')}</div>
+          <small>Nichts auswählen bedeutet: Rechte für alle Bereiche.</small></div>
         <div class="field"><label>Begründung</label><textarea name="reason" style="min-height:90px" placeholder="Warum brauchst du die Rechte?"></textarea></div>
         <button class="btn" type="submit">Anfrage senden</button>
       </form>`}
@@ -570,6 +575,124 @@
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
       invites = (await window.OSGDB.listInvites()) || invites;
       closeModal(); render(); toast('Zugang vorbereitet');
+    });
+  }
+
+  /* ---------- Interner Abteilungsbereich ---------- */
+  let internRows = { members: [], internal_docs: [], tasks: [] };
+  let internDept = '';
+
+  const INTERN = {
+    mitglieder: {
+      table: 'members', label: 'Mitglieder', unit: 'Mitglieder', add: 'Neues Mitglied', order: 'last_name',
+      cols: [
+        { h: 'Name', r: (x) => `<span class="t-title">${esc(x.last_name)}, ${esc(x.first_name)}</span><span class="t-sub">${esc(x.email || '')}${x.phone ? ' · ' + esc(x.phone) : ''}</span>` },
+        { h: 'Mannschaft', r: (x) => esc(x.team || '—') },
+        { h: 'Geburtsdatum', r: (x) => x.birthdate ? dt(x.birthdate) : '—' },
+        { h: 'Mitglied seit', r: (x) => x.member_since ? dt(x.member_since) : '—' },
+        { h: 'Status', r: (x) => `<span class="pill ${x.status === 'aktiv' ? 'angenommen' : x.status === 'ausgetreten' ? 'abgelehnt' : 'wartet'}">${esc(x.status)}</span>` }
+      ],
+      fields: [
+        { k: 'first_name', l: 'Vorname', t: 'text' }, { k: 'last_name', l: 'Nachname', t: 'text' },
+        { k: 'team', l: 'Mannschaft / Gruppe', t: 'text' }, { k: 'birthdate', l: 'Geburtsdatum', t: 'date' },
+        { k: 'email', l: 'E-Mail', t: 'text' }, { k: 'phone', l: 'Telefon', t: 'text' },
+        { k: 'address', l: 'Adresse', t: 'text' }, { k: 'member_since', l: 'Mitglied seit', t: 'date' },
+        { k: 'status', l: 'Status', t: 'select', o: ['aktiv', 'passiv', 'ausgetreten'] },
+        { k: 'fee_note', l: 'Beitrag / Hinweis', t: 'text' }, { k: 'notes', l: 'Notizen', t: 'area' }
+      ]
+    },
+    intern: {
+      table: 'internal_docs', label: 'Interne Ablage', unit: 'Dokumente', add: 'Neues Dokument', order: 'created_at',
+      cols: [
+        { h: 'Titel', r: (x) => `<span class="t-title">${esc(x.title)}</span><span class="t-sub">${esc(x.note || '')}</span>` },
+        { h: 'Kategorie', r: (x) => `<span class="pill">${esc(x.category || 'Sonstiges')}</span>` },
+        { h: 'Datei', r: (x) => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">öffnen</a>` : '—' },
+        { h: 'Angelegt', r: (x) => dt(x.created_at) }
+      ],
+      fields: [
+        { k: 'title', l: 'Titel', t: 'text' },
+        { k: 'category', l: 'Kategorie', t: 'select', o: ['Protokolle', 'Verträge', 'Anträge', 'Abrechnungen', 'Trainingsplanung', 'Sonstiges'] },
+        { k: 'url', l: 'Datei', t: 'text' }, { k: 'note', l: 'Notiz', t: 'area' }
+      ]
+    },
+    aufgaben: {
+      table: 'tasks', label: 'Aufgaben', unit: 'Aufgaben', add: 'Neue Aufgabe', order: 'due_date',
+      cols: [
+        { h: 'Aufgabe', r: (x) => `<span class="t-title">${esc(x.title)}</span><span class="t-sub">${esc(String(x.description || '').slice(0, 70))}</span>` },
+        { h: 'Zuständig', r: (x) => esc(x.assignee || '—') },
+        { h: 'Fällig', r: (x) => x.due_date ? dt(x.due_date) : '—' },
+        { h: 'Status', r: (x) => `<span class="pill ${x.status === 'erledigt' ? 'angenommen' : x.status === 'in Arbeit' ? 'wartet' : 'neu'}">${esc(x.status)}</span>` }
+      ],
+      fields: [
+        { k: 'title', l: 'Aufgabe', t: 'text' }, { k: 'assignee', l: 'Zuständig', t: 'text' },
+        { k: 'due_date', l: 'Fällig bis', t: 'date' },
+        { k: 'status', l: 'Status', t: 'select', o: ['offen', 'in Arbeit', 'erledigt'] },
+        { k: 'description', l: 'Beschreibung', t: 'area' }
+      ]
+    }
+  };
+
+  const meineDepts = () => {
+    const s = myScope();
+    return (isAdminRole() || unscoped()) ? C.depts.map((d) => d.name) : s.depts;
+  };
+
+  function internView(key) {
+    const cfg = INTERN[key];
+    const DB = window.OSGDB;
+    if (!DB || !DB.configured) {
+      return `<div class="head"><div><h1>${cfg.label}</h1><p>Dieser Bereich braucht das Backend. Ohne Datenbank gibt es ihn nicht, weil hier persönliche Daten liegen.</p></div></div>`;
+    }
+    if (!DB.features.intern) {
+      return `<div class="head"><div><h1>${cfg.label}</h1><p>Noch nicht eingerichtet. Bitte <b>supabase-abteilungen.sql</b> im Supabase SQL Editor ausführen.</p></div></div>`;
+    }
+    const depts = meineDepts();
+    if (!internDept) internDept = depts[0] || '';
+    const rows = (internRows[cfg.table] || []).filter((x) => x.dept === internDept);
+    const darf = canEdit() && depts.indexOf(internDept) >= 0;
+    const body = rows.map((x) => `<tr>${cfg.cols.map((c) => `<td>${c.r(x)}</td>`).join('')}
+      <td class="actions">${darf ? `<button class="btn sm ghost" data-iedit="${x.id}">Bearbeiten</button>
+        <button class="btn sm danger" data-idel="${x.id}">Löschen</button>` : '<span class="t-sub">nur lesen</span>'}</td></tr>`).join('');
+    return `<div class="head">
+        <div><h1>${cfg.label}</h1><p>${rows.length} ${cfg.unit} in ${esc(internDept || 'keiner Abteilung')} · nur intern, nicht auf der Website</p></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="deptPick" class="deptpick">${depts.map((d) => `<option${d === internDept ? ' selected' : ''}>${esc(d)}</option>`).join('')}</select>
+          ${darf ? `<button class="btn" id="internAdd">+ ${cfg.add}</button>` : ''}
+        </div>
+      </div>
+      <div class="card">${rows.length ? table(cfg.cols.map((c) => c.h).concat(['']), body) : '<div class="empty">Noch keine Einträge in dieser Abteilung.</div>'}</div>`;
+  }
+
+  function internEdit(key, row) {
+    const cfg = INTERN[key];
+    const isNew = !row;
+    const x = row || {};
+    const f = (fd) => cfg.fields.map((fl) => {
+      const v = x[fl.k] == null ? '' : x[fl.k];
+      if (fl.t === 'area') return `<div class="field"><label>${fl.l}</label><textarea name="${fl.k}" style="min-height:90px">${esc(v)}</textarea></div>`;
+      if (fl.t === 'select') return `<div class="field"><label>${fl.l}</label><select name="${fl.k}">${fl.o.map((o) => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+      const up = fl.k === 'url' ? uploadRow('url') : '';
+      return `<div class="field"><label>${fl.l}</label><input name="${fl.k}" type="${fl.t}" value="${esc(v)}" />${up}</div>`;
+    }).join('');
+    openModal(isNew ? cfg.add : cfg.label + ' bearbeiten',
+      `<form id="internForm"><div class="grid2">${f()}</div>
+        <p class="t-sub">Abteilung: <b>${esc(internDept)}</b>. Diese Daten sind nur im Admin-Bereich sichtbar.</p></form>`,
+      '<button class="btn ghost" type="button" id="mCancel">Abbrechen</button><button class="btn" type="button" id="mSave">Speichern</button>');
+    el('mCancel').addEventListener('click', closeModal);
+    wireUploads('internForm', 'intern/' + cfg.table);
+    el('mSave').addEventListener('click', async () => {
+      const fd = new FormData(el('internForm'));
+      const patch = { dept: internDept };
+      cfg.fields.forEach((fl) => {
+        const v = String(fd.get(fl.k) == null ? '' : fd.get(fl.k));
+        patch[fl.k] = (fl.t === 'date' && !v) ? null : v;
+      });
+      const res = isNew
+        ? await window.OSGDB.addRow(cfg.table, patch)
+        : await window.OSGDB.updateRow(cfg.table, x.id, patch);
+      if (!res.ok) { toast('Fehler: ' + res.error); return; }
+      internRows[cfg.table] = (await window.OSGDB.rows(cfg.table, cfg.order)) || internRows[cfg.table];
+      closeModal(); render(); toast('Gespeichert');
     });
   }
 
@@ -772,6 +895,7 @@
     else if (view === 'settings') c.innerHTML = settings();
     else if (view === 'zugaenge') c.innerHTML = zugaenge();
     else if (view === 'meinerechte') c.innerHTML = meineRechte();
+    else if (INTERN[view]) c.innerHTML = internView(view);
     else if (COLLECTIONS[view]) c.innerHTML = collection(COLLECTIONS[view]);
     else { view = 'dashboard'; c.innerHTML = dashboard(); }
 
@@ -793,13 +917,30 @@
         persist(); render(); toast('Gelöscht');
       }));
     }
+    if (INTERN[view]) {
+      const cfg = INTERN[view];
+      const dp = el('deptPick');
+      if (dp) dp.addEventListener('change', () => { internDept = dp.value; render(); });
+      const ia = el('internAdd');
+      if (ia) ia.addEventListener('click', () => internEdit(view, null));
+      c.querySelectorAll('[data-iedit]').forEach((b) => b.addEventListener('click', () => internEdit(view, (internRows[cfg.table] || []).find((x) => x.id === b.dataset.iedit))));
+      c.querySelectorAll('[data-idel]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('Eintrag wirklich löschen?')) return;
+        const res = await window.OSGDB.removeRow(cfg.table, b.dataset.idel);
+        if (!res.ok) { toast('Fehler: ' + res.error); return; }
+        internRows[cfg.table] = (await window.OSGDB.rows(cfg.table, cfg.order)) || [];
+        render(); toast('Gelöscht');
+      }));
+    }
+
     const rf = el('reqForm');
     if (rf) rf.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(rf);
       const res = await window.OSGDB.addRequest({
         name: (myProfile && myProfile.name) || '',
-        wish_role: String(fd.get('wish_role')), wish_scope: String(fd.get('wish_scope') || ''),
+        wish_role: String(fd.get('wish_role')),
+        wish_scope: fd.getAll('wish_depts').concat(fd.getAll('wish_teams')).map(String).join(', ') || 'alle Bereiche',
         reason: String(fd.get('reason') || '')
       });
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
@@ -809,7 +950,19 @@
     c.querySelectorAll('[data-reqok]').forEach((b) => b.addEventListener('click', async () => {
       const r = requests.find((x) => x.id === b.dataset.reqok);
       const p = profiles.find((x) => x.id === r.user_id);
-      if (p && r.wish_role) await window.OSGDB.setProfile(p.id, { role: r.wish_role, approved: true });
+      if (p) {
+        const patch = { approved: true };
+        if (r.wish_role) patch.role = r.wish_role;
+        // Gewünschte Bereiche übernehmen, soweit sie zu Abteilungen und Mannschaften passen
+        if (hasScope() && r.wish_scope && r.wish_scope !== 'alle Bereiche') {
+          const teile = String(r.wish_scope).split(',').map((x) => x.trim());
+          patch.scope_depts = C.depts.map((d) => d.name).filter((n) => teile.indexOf(n) >= 0);
+          patch.scope_teams = C.teams.map((t) => t.name).filter((n) => teile.indexOf(n) >= 0);
+        } else if (hasScope() && r.wish_scope === 'alle Bereiche') {
+          patch.scope_depts = []; patch.scope_teams = [];
+        }
+        await window.OSGDB.setProfile(p.id, patch);
+      }
       const res = await window.OSGDB.setRequest(r.id, { status: 'genehmigt' });
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
       profiles = (await window.OSGDB.listProfiles()) || profiles;
@@ -922,6 +1075,11 @@
       profiles = (await DB.listProfiles()) || [];
       invites = (await DB.listInvites()) || [];
       requests = (await DB.listRequests()) || [];
+      if (DB.features.intern) {
+        internRows.members = (await DB.rows('members', 'last_name')) || [];
+        internRows.internal_docs = (await DB.rows('internal_docs', 'created_at')) || [];
+        internRows.tasks = (await DB.rows('tasks', 'due_date')) || [];
+      }
       const remote = await DB.fetchContent();
       if (remote) { S.save(remote); C = S.load(); }
       else { await DB.saveContent(C); }

@@ -84,6 +84,24 @@ Zwei Wege zum Zugang:
 
 Oberadmin ist `djojananil@gmail.com`. Für `info@oesg08.de` liegt eine Admin-Einladung bereit.
 
+## Interner Abteilungsbereich
+
+Datei `supabase-abteilungen.sql` im SQL Editor ausführen (nach `supabase-zustaendigkeit.sql`).
+
+Drei neue Bereiche im Admin, jeweils mit Abteilungs-Auswahl oben rechts:
+- **Mitglieder**: Vor- und Nachname, Mannschaft, Geburtsdatum, Kontakt, Adresse, Mitglied seit,
+  Status (aktiv, passiv, ausgetreten), Beitragshinweis, Notizen
+- **Interne Ablage**: Protokolle, Verträge, Anträge, Abrechnungen, Trainingsplanung, Sonstiges
+- **Aufgaben**: Titel, Zuständig, Fällig bis, Status, Beschreibung
+
+Diese Daten erscheinen **nicht** auf der Website. Der Zugriffsschutz läuft hier über die
+Datenbank: Wer als Zuständigkeit nur "Fußball" hat, sieht und bearbeitet ausschließlich
+Fußball-Datensätze, unabhängig von der Oberfläche. Admins und Zugänge ohne Einschränkung
+sehen alle Abteilungen.
+
+Auch Formularanfragen sind so gefiltert: Ein Abteilungszugang sieht nur Anfragen seiner
+Abteilung, Admins sehen alle.
+
 ## Wichtige Hinweise
 - **Kontaktdaten der Ansprechpartner sind bewusst leer** (Platzhalter). Namen und Funktionen
   sind eingetragen, E-Mail/Telefon im Admin ergänzen.
