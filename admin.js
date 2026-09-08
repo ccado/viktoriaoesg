@@ -56,8 +56,14 @@
         { h: 'Gruppe', r: (x) => `<span class="pill">${esc(x.group || x.dept)}</span>` },
         { h: 'Trainer', r: (x) => esc(x.coaches || ',') }
       ],
-      fields: [F.text('name', 'Name'), F.sel('group', 'Gruppe', ['Senioren', 'Junioren']), F.sel('dept', 'Abteilung', ['Fußball', 'Boxen', 'Tischtennis', 'Gymnastik']), F.text('league', 'Liga'), F.text('coaches', 'Trainer/Betreuer'), F.text('times', 'Trainingszeiten'), F.text('image', 'Mannschaftsfoto-URL'), F.num('order', 'Sortierung')],
-      blank: () => ({ id: S.uid('t'), name: '', group: 'Senioren', dept: 'Fußball', league: '', coaches: '', times: '', image: '', order: 99 }),
+      fields: [F.text('name', 'Name'), F.text('slug', 'URL-Slug', 'wird automatisch erzeugt'),
+        F.sel('group', 'Gruppe', ['Senioren', 'Junioren']), F.sel('dept', 'Abteilung', ['Fußball', 'Boxen', 'Tischtennis', 'Gymnastik']),
+        F.text('ageClass', 'Altersklasse', 'z. B. F-Jugend'), F.text('league', 'Liga'),
+        F.text('coaches', 'Trainer/Betreuer'), F.text('contactEmail', 'Kontakt-E-Mail Trainer'),
+        F.text('times', 'Trainingszeiten'), F.text('image', 'Mannschaftsfoto-URL'), F.num('order', 'Sortierung')],
+      blank: () => ({ id: S.uid('t'), name: '', slug: '', group: 'Senioren', dept: 'Fußball', ageClass: '', league: '', coaches: '', contactEmail: '', times: '', image: '', order: 99, roster: [], matches: [] }),
+      before: (x) => { if (!x.slug) x.slug = slugify(x.name); if (!x.roster) x.roster = []; if (!x.matches) x.matches = []; return x; },
+      extraActions: (x) => `<button class="btn sm" data-kader="${x.id}">Kader & Spielplan</button>`,
       sort: (a, b) => (a.order || 0) - (b.order || 0)
     },
     depts: {
@@ -96,21 +102,24 @@
     },
     partners: {
       key: 'partners', label: 'Partner', unit: 'Partner', add: 'Neuer Partner',
-      cols: [{ h: 'Name', r: (x) => `<span class="t-title">${esc(x.name)}</span><span class="t-sub">${esc(x.url || '')}</span>` }, { h: 'Logo', r: (x) => x.logo ? 'vorhanden' : '<span class="pill wartet">fehlt</span>' }],
+      cols: [
+        { h: 'Logo', r: (x) => x.logo ? `<img class="logo-thumb" src="${esc(x.logo)}" alt="" />` : '<span class="pill wartet">fehlt</span>' },
+        { h: 'Name', r: (x) => `<span class="t-title">${esc(x.name)}</span><span class="t-sub">${esc(x.url || '')}</span>` }
+      ],
       fields: [F.text('name', 'Name'), F.text('url', 'Website'), F.text('logo', 'Logo-URL')],
       blank: () => ({ id: S.uid('p'), name: '', url: '', logo: '' })
     },
     people: {
       key: 'people', label: 'Ansprechpartner', unit: 'Personen', add: 'Neuer Ansprechpartner',
       cols: [
-        { h: 'Person', r: (x) => `<span class="avatar">${esc((x.name || '?').charAt(0))}</span><span class="t-title" style="display:inline">${esc(x.name)}</span>` },
+        { h: 'Person', r: (x) => `${x.photo ? `<img class="avatar-img" src="${esc(x.photo)}" alt="" />` : `<span class="avatar">${esc((x.name || '?').charAt(0))}</span>`}<span class="t-title" style="display:inline">${esc(x.name)}</span>` },
         { h: 'Funktion', r: (x) => esc(x.role) },
         { h: 'Bereich', r: (x) => `<span class="pill">${esc(x.area)}</span>` },
         { h: 'E-Mail', r: (x) => x.email ? esc(x.email) : '<span class="t-sub">,</span>' },
         { h: 'Öffentlich', r: (x) => x.publish === false ? '<span class="pill abgelehnt">nein</span>' : '<span class="pill angenommen">ja</span>' }
       ],
-      fields: [F.text('name', 'Name'), F.text('role', 'Funktion'), F.sel('area', 'Bereich', ['Vorstand', 'Sport', 'Trainerteam', 'Abteilung Boxen', 'Abteilung Tischtennis', 'Abteilung Gymnastik']), F.text('email', 'E-Mail (optional)'), F.text('phone', 'Telefon (intern)'), F.num('order', 'Sortierung'), F.bool('publish', 'Auf der Website anzeigen')],
-      blank: () => ({ id: S.uid('pe'), name: '', role: '', area: 'Vorstand', email: '', phone: '', order: 99, publish: true }),
+      fields: [F.text('name', 'Name'), F.text('role', 'Funktion'), F.sel('area', 'Bereich', ['Vorstand', 'Sport', 'Trainerteam', 'Abteilung Boxen', 'Abteilung Tischtennis', 'Abteilung Gymnastik']), F.text('email', 'E-Mail (optional)'), F.text('phone', 'Telefon (intern)'), F.text('photo', 'Foto'), F.num('order', 'Sortierung'), F.bool('publish', 'Auf der Website anzeigen')],
+      blank: () => ({ id: S.uid('pe'), name: '', role: '', area: 'Vorstand', email: '', phone: '', photo: '', order: 99, publish: true }),
       sort: (a, b) => (a.order || 0) - (b.order || 0)
     }
   };
@@ -119,7 +128,7 @@
     ['dashboard', 'Dashboard'], ['anfragen', 'Anfragen'], ['news', 'News'], ['events', 'Termine'],
     ['teams', 'Mannschaften'], ['depts', 'Abteilungen'], ['gallery', 'Galerie'], ['docs', 'Dokumente'],
     ['pages', 'Seiteninhalte'], ['faq', 'FAQ'], ['partners', 'Partner'], ['people', 'Ansprechpartner'],
-    ['zugaenge', 'Zugänge'], ['settings', 'Einstellungen']
+    ['zugaenge', 'Zugänge'], ['meinerechte', 'Meine Rechte'], ['settings', 'Einstellungen']
   ];
 
   /* ---------- Login ---------- */
@@ -303,11 +312,11 @@
   function collection(cfg) {
     const list = C[cfg.key].slice().sort(cfg.sort || (() => 0));
     const rows = list.map((x) => `<tr>${cfg.cols.map((c) => `<td>${c.r(x)}</td>`).join('')}
-      <td class="actions">${canEdit()
-        ? `<button class="btn sm ghost" data-edit="${x.id}">Bearbeiten</button><button class="btn sm danger" data-del="${x.id}">Löschen</button>`
-        : '<span class="t-sub">nur lesen</span>'}</td></tr>`).join('');
+      <td class="actions">${itemEditable(cfg.key, x)
+        ? `${cfg.extraActions ? cfg.extraActions(x) : ''}<button class="btn sm ghost" data-edit="${x.id}">Bearbeiten</button><button class="btn sm danger" data-del="${x.id}">Löschen</button>`
+        : `${cfg.extraActions ? '<span class="t-sub">nur lesen</span>' : '<span class="t-sub">nur lesen</span>'}`}</td></tr>`).join('');
     return `<div class="head"><div><h1>${cfg.label} verwalten</h1><p>${list.length} ${cfg.unit}</p></div>
-      ${canEdit() ? `<button class="btn" id="addBtn">+ ${cfg.add}</button>` : ''}</div>
+      ${sectionEditable(cfg.key) ? `<button class="btn" id="addBtn">+ ${cfg.add}</button>` : ''}</div>
       <div class="card">${list.length ? table(cfg.cols.map((c) => c.h).concat(['']), rows) : '<div class="empty">Noch keine Einträge.</div>'}</div>`;
   }
 
@@ -317,7 +326,7 @@
       <td><span class="t-sub" style="font-size:13px">${esc(k)}</span></td>
       <td><span class="t-title">${esc(C.pages[k].title)}</span></td>
       <td>${esc((C.pages[k].heading || '').slice(0, 60))}</td>
-      <td class="actions">${canEdit() ? `<button class="btn sm ghost" data-page="${esc(k)}">Bearbeiten</button>` : '<span class="t-sub">nur lesen</span>'}</td></tr>`).join('');
+      <td class="actions">${sectionEditable('pages') ? `<button class="btn sm ghost" data-page="${esc(k)}">Bearbeiten</button>` : '<span class="t-sub">nur lesen</span>'}</td></tr>`).join('');
     return `<div class="head"><div><h1>Seiteninhalte</h1><p>Statische Texte der Website bearbeiten, inkl. Impressum und Datenschutz.</p></div></div>
       <div class="card">${table(['Seite / Slug', 'Titel', 'Überschrift', ''], rows)}</div>`;
   }
@@ -351,11 +360,39 @@
 
   let profiles = [];
   let invites = [];
+  let requests = [];
   let myProfile = null;
   const canEdit = () => {
     const DB = window.OSGDB;
     if (!DB || !DB.configured) return true;
     return !!(myProfile && (myProfile.role === 'admin' || myProfile.role === 'redaktion'));
+  };
+  const myScope = () => ({
+    depts: (myProfile && myProfile.scope_depts) || [],
+    teams: (myProfile && myProfile.scope_teams) || []
+  });
+  const unscoped = () => { const s = myScope(); return !s.depts.length && !s.teams.length; };
+  /* Darf dieser Bereich überhaupt bearbeitet werden? */
+  const sectionEditable = (key) => {
+    if (!canEdit()) return false;
+    if (isAdminRole() || unscoped()) return true;
+    return ['news', 'events', 'teams', 'depts', 'gallery'].indexOf(key) >= 0;
+  };
+  /* Darf dieser einzelne Eintrag bearbeitet werden? */
+  const itemEditable = (key, x) => {
+    if (!canEdit()) return false;
+    if (isAdminRole() || unscoped()) return true;
+    const s = myScope();
+    if (key === 'teams') return s.teams.indexOf(x.name) >= 0;
+    if (key === 'depts') return s.depts.indexOf(x.name) >= 0;
+    if (key === 'news' || key === 'events') return s.depts.indexOf(x.category) >= 0;
+    if (key === 'gallery') return true;
+    return false;
+  };
+  const scopeText = () => {
+    const s = myScope();
+    if (unscoped()) return 'alle Bereiche';
+    return [s.depts.join(', '), s.teams.join(', ')].filter(Boolean).join(' · ');
   };
   const isAdminRole = () => {
     const DB = window.OSGDB;
@@ -373,7 +410,7 @@
     }
     const admin = myProfile && myProfile.role === 'admin';
     const rows = profiles.map((p) => `<tr>
-      <td><span class="avatar">${esc((p.name || p.email || '?').charAt(0).toUpperCase())}</span>
+      <td>${p.avatar_url ? `<img class="avatar-img" src="${esc(p.avatar_url)}" alt="" />` : `<span class="avatar">${esc((p.name || p.email || '?').charAt(0).toUpperCase())}</span>`}
         <span class="t-title" style="display:inline">${esc(p.name || '(ohne Namen)')}</span>
         <span class="t-sub">${esc(p.email || '')}${p.phone ? ' · ' + esc(p.phone) : ''}</span></td>
       <td>${esc(p.funktion || '—')}</td>
@@ -381,6 +418,7 @@
       <td>${p.approved ? '<span class="pill angenommen">freigeschaltet</span>' : '<span class="pill wartet">wartet auf Freigabe</span>'}</td>
       <td class="actions">${admin ? `
         <button class="btn sm ghost" data-editp="${p.id}">Bearbeiten</button>
+        <button class="btn sm ghost" data-role="${p.id}">${p.role === 'admin' ? 'Zu Redaktion' : 'Zu Admin'}</button>
         <button class="btn sm ${p.approved ? 'ghost' : 'ok'}" data-appr="${p.id}">${p.approved ? 'Sperren' : 'Freischalten'}</button>
         <button class="btn sm danger" data-delp="${p.id}">Löschen</button>` : '<span class="t-sub">nur Admins</span>'}</td>
     </tr>`).join('');
@@ -399,7 +437,71 @@
       <div class="card">${(profiles.length || invites.length)
         ? table(['Person', 'Funktion', 'Rechte', 'Status', ''], rows + invRows)
         : '<div class="empty">Noch keine Zugänge.</div>'}</div>
-      <p class="t-sub" style="margin-top:14px">${ROLE_INFO}${admin ? '' : ' Freischalten und Rechte ändern dürfen nur Admins.'}</p>`;
+      <p class="t-sub" style="margin-top:14px">${ROLE_INFO}${admin ? '' : ' Freischalten und Rechte ändern dürfen nur Admins.'}</p>
+      ${admin && requests.length ? `<h4 class="group-title" style="margin-top:30px">Rechteanfragen</h4>
+      <div class="card">${table(['Person', 'Wunsch', 'Bereiche', 'Begründung', 'Status', ''], requests.map((r) => `<tr>
+        <td><span class="t-title">${esc(r.name || r.email || '')}</span><span class="t-sub">${esc(r.email || '')}</span></td>
+        <td>${esc(ROLE_LABEL[r.wish_role] || r.wish_role || '')}</td>
+        <td>${esc(r.wish_scope || '')}</td>
+        <td>${esc(String(r.reason || '').slice(0, 80))}</td>
+        <td><span class="pill ${r.status === 'genehmigt' ? 'angenommen' : r.status === 'abgelehnt' ? 'abgelehnt' : 'wartet'}">${esc(r.status)}</span></td>
+        <td class="actions">${r.status === 'offen' ? `<button class="btn sm ok" data-reqok="${r.id}">Genehmigen</button>
+          <button class="btn sm danger" data-reqno="${r.id}">Ablehnen</button>` : ''}</td>
+      </tr>`).join(''))}</div>
+      <p class="t-sub" style="margin-top:10px">Genehmigen setzt die gewünschte Rechtestufe. Bereiche danach im Profil anhaken.</p>` : ''}`;
+  }
+
+  const hasScope = () => {
+    const DB = window.OSGDB;
+    return !DB || !DB.configured || DB.features.scope;
+  };
+  const hasRequests = () => {
+    const DB = window.OSGDB;
+    return !!(DB && DB.configured && DB.features.requests);
+  };
+
+  function scopeFields(p) {
+    if (!hasScope()) {
+      return '<p class="t-sub">Zuständigkeiten pro Abteilung und Mannschaft sind noch nicht eingerichtet. Dafür einmal <b>supabase-zustaendigkeit.sql</b> im Supabase SQL Editor ausführen.</p>';
+    }
+    const sd = (p.scope_depts || []), st = (p.scope_teams || []);
+    return `<div class="field"><label>Zuständig für Abteilungen</label>
+        <div class="chips">${C.depts.map((d) => `<label class="chip"><input type="checkbox" name="scope_depts" value="${esc(d.name)}"${sd.indexOf(d.name) >= 0 ? ' checked' : ''} /> ${esc(d.name)}</label>`).join('')}</div></div>
+      <div class="field"><label>Zuständig für Mannschaften</label>
+        <div class="chips">${C.teams.map((t) => `<label class="chip"><input type="checkbox" name="scope_teams" value="${esc(t.name)}"${st.indexOf(t.name) >= 0 ? ' checked' : ''} /> ${esc(t.name)}</label>`).join('')}</div>
+        <small>Nichts angehakt bedeutet: zuständig für alles. Mit Auswahl darf die Person nur diese Bereiche bearbeiten, alles andere nur ansehen.</small></div>`;
+  }
+
+  function meineRechte() {
+    const DB = window.OSGDB;
+    if (!DB || !DB.configured) {
+      return '<div class="head"><div><h1>Meine Rechte</h1><p>Ohne Backend gibt es nur den gemeinsamen Zugangscode.</p></div></div>';
+    }
+    const p = myProfile || {};
+    const meine = requests.filter((r) => r.user_id === p.id);
+    return `<div class="head"><div><h1>Meine Rechte</h1><p>Angemeldet als ${esc(p.email || '')}</p></div></div>
+      <div class="tiles">
+        <div class="tile"><b style="font-size:22px">${esc(ROLE_LABEL[p.role] || p.role || '')}</b><span>Rechtestufe</span></div>
+        <div class="tile"><b style="font-size:22px">${esc(p.funktion || '—')}</b><span>Funktion im Verein</span></div>
+        <div class="tile"><b style="font-size:18px">${esc(scopeText())}</b><span>Zuständig für</span></div>
+      </div>
+      <div class="head" style="margin:30px 0 14px"><div><h1 style="font-size:22px">Mehr Rechte anfragen</h1>
+        <p>Die Anfrage geht an die Admins des Vereins.</p></div></div>
+      ${!hasRequests() ? '<div class="card" style="padding:24px"><p>Rechteanfragen sind noch nicht eingerichtet. Dafür einmal <b>supabase-zustaendigkeit.sql</b> im Supabase SQL Editor ausführen.</p></div>' : `
+      <form class="card" id="reqForm" style="padding:24px">
+        <div class="grid2">
+          <div class="field"><label>Gewünschte Rechtestufe</label><select name="wish_role">${Object.keys(ROLE_LABEL).map((r) => `<option value="${r}"${p.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
+          <div class="field"><label>Gewünschte Bereiche</label><input name="wish_scope" placeholder="z. B. F2-Junioren, News Jugend" /></div>
+        </div>
+        <div class="field"><label>Begründung</label><textarea name="reason" style="min-height:90px" placeholder="Warum brauchst du die Rechte?"></textarea></div>
+        <button class="btn" type="submit">Anfrage senden</button>
+      </form>`}
+      ${meine.length ? `<h4 class="group-title" style="margin-top:30px">Meine Anfragen</h4>
+      <div class="card">${table(['Gestellt', 'Wunsch', 'Bereiche', 'Status'], meine.map((r) => `<tr>
+        <td>${dt(r.created_at)}</td><td>${esc(ROLE_LABEL[r.wish_role] || r.wish_role || '')}</td>
+        <td>${esc(r.wish_scope || '')}</td>
+        <td><span class="pill ${r.status === 'genehmigt' ? 'angenommen' : r.status === 'abgelehnt' ? 'abgelehnt' : 'wartet'}">${esc(r.status)}</span></td>
+      </tr>`).join(''))}</div>` : ''}`;
   }
 
   function editProfile(p) {
@@ -409,20 +511,29 @@
         <div class="field"><label>Funktion im Verein</label><input name="funktion" value="${esc(p.funktion || '')}" placeholder="z. B. Jugendleiter" /></div>
         <div class="field"><label>E-Mail (Login)</label><input value="${esc(p.email || '')}" disabled /></div>
         <div class="field"><label>Telefon</label><input name="phone" value="${esc(p.phone || '')}" /></div>
+        <div class="field"><label>Foto</label><input name="avatar_url" value="${esc(p.avatar_url || '')}" placeholder="Datei hochladen oder Adresse" />${uploadRow('avatar_url')}</div>
         <div class="field"><label>Rechte</label><select name="role">${Object.keys(ROLE_LABEL).map((r) => `<option value="${r}"${p.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
         <label class="check" style="align-self:end"><input type="checkbox" name="approved"${p.approved ? ' checked' : ''} /> Zugang freigeschaltet</label>
       </div>
+      ${scopeFields(p)}
       <p class="t-sub">${ROLE_INFO}</p>
     </form>`;
     openModal('Zugang bearbeiten', body, '<button class="btn ghost" type="button" id="mCancel">Abbrechen</button><button class="btn" type="button" id="mSave">Speichern</button>');
     el('mCancel').addEventListener('click', closeModal);
+    wireUploads('profForm', 'profile');
     el('mSave').addEventListener('click', async () => {
       const fd = new FormData(el('profForm'));
-      const res = await window.OSGDB.setProfile(p.id, {
+      const patch = {
         name: String(fd.get('name') || ''), funktion: String(fd.get('funktion') || ''),
         phone: String(fd.get('phone') || ''), role: String(fd.get('role')),
+        avatar_url: String(fd.get('avatar_url') || ''),
         approved: fd.get('approved') === 'on'
-      });
+      };
+      if (hasScope()) {
+        patch.scope_depts = fd.getAll('scope_depts').map(String);
+        patch.scope_teams = fd.getAll('scope_teams').map(String);
+      }
+      const res = await window.OSGDB.setProfile(p.id, patch);
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
       profiles = (await window.OSGDB.listProfiles()) || profiles;
       closeModal(); render(); toast('Zugang gespeichert');
@@ -440,6 +551,7 @@
         <div class="field"><label>Telefon</label><input name="phone" value="${esc(i.phone || '')}" /></div>
         <div class="field"><label>Rechte</label><select name="role">${Object.keys(ROLE_LABEL).map((r) => `<option value="${r}"${i.role === r ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('')}</select></div>
       </div>
+      ${scopeFields(i)}
       <p class="t-sub">Die Person registriert sich auf admin.html mit genau dieser E-Mail und wählt dabei ihr Passwort. Der Zugang ist dann sofort freigeschaltet, Name, Funktion und Rechte werden übernommen.</p>
     </form>`;
     openModal(isNew ? 'Zugang anlegen' : 'Einladung bearbeiten', body,
@@ -451,11 +563,68 @@
       if (!mail) { toast('Bitte eine E-Mail eintragen'); return; }
       const res = await window.OSGDB.addInvite({
         email: mail, name: String(fd.get('name') || ''), phone: String(fd.get('phone') || ''),
-        funktion: String(fd.get('funktion') || ''), role: String(fd.get('role'))
+        funktion: String(fd.get('funktion') || ''), role: String(fd.get('role')),
+        scope_depts: hasScope() ? fd.getAll('scope_depts').map(String) : [],
+        scope_teams: hasScope() ? fd.getAll('scope_teams').map(String) : []
       });
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
       invites = (await window.OSGDB.listInvites()) || invites;
       closeModal(); render(); toast('Zugang vorbereitet');
+    });
+  }
+
+  /* ---------- Kader und Spielplan ---------- */
+  function kaderEditor(team) {
+    const roster = (team.roster || []).slice();
+    const matches = (team.matches || []).slice();
+
+    const rosterRow = (p, i) => `<tr>
+      <td><input value="${esc(p.nr || '')}" data-r="${i}" data-f="nr" style="width:60px" /></td>
+      <td><input value="${esc(p.name || '')}" data-r="${i}" data-f="name" /></td>
+      <td><input value="${esc(p.position || '')}" data-r="${i}" data-f="position" placeholder="Tor, Abwehr, Mittelfeld, Sturm" /></td>
+      <td class="actions"><button class="btn sm danger" type="button" data-rdel="${i}">Entfernen</button></td>
+    </tr>`;
+
+    const matchRow = (m, i) => `<tr>
+      <td><input type="date" value="${esc(m.date || '')}" data-m="${i}" data-f="date" /></td>
+      <td><input value="${esc(m.time || '')}" data-m="${i}" data-f="time" placeholder="15:00" style="width:80px" /></td>
+      <td><input value="${esc(m.opponent || '')}" data-m="${i}" data-f="opponent" placeholder="Gegner" /></td>
+      <td><select data-m="${i}" data-f="home"><option value="heim"${m.home !== 'auswaerts' ? ' selected' : ''}>Heim</option><option value="auswaerts"${m.home === 'auswaerts' ? ' selected' : ''}>Auswärts</option></select></td>
+      <td><input value="${esc(m.result || '')}" data-m="${i}" data-f="result" placeholder="3:1" style="width:80px" /></td>
+      <td class="actions"><button class="btn sm danger" type="button" data-mdel="${i}">Entfernen</button></td>
+    </tr>`;
+
+    function draw() {
+      el('kaderBody').innerHTML = `
+        <h4 class="group-title" style="margin-top:0">Kader (${roster.length})</h4>
+        <div class="card"><table><thead><tr><th>Nr.</th><th>Name</th><th>Position</th><th></th></tr></thead>
+          <tbody>${roster.map(rosterRow).join('') || '<tr><td colspan="4" class="empty">Noch keine Spieler</td></tr>'}</tbody></table></div>
+        <button class="btn ghost sm" type="button" id="addPlayer" style="margin-top:10px">+ Spieler</button>
+
+        <h4 class="group-title">Spielplan (${matches.length})</h4>
+        <div class="card"><table><thead><tr><th>Datum</th><th>Zeit</th><th>Gegner</th><th>Ort</th><th>Ergebnis</th><th></th></tr></thead>
+          <tbody>${matches.map(matchRow).join('') || '<tr><td colspan="6" class="empty">Noch keine Spiele</td></tr>'}</tbody></table></div>
+        <button class="btn ghost sm" type="button" id="addMatch" style="margin-top:10px">+ Spiel</button>
+        <p class="t-sub" style="margin-top:14px">Kader und Spielplan erscheinen auf der Mannschaftsseite der Website.</p>`;
+
+      el('addPlayer').addEventListener('click', () => { roster.push({ nr: '', name: '', position: '' }); draw(); });
+      el('addMatch').addEventListener('click', () => { matches.push({ date: '', time: '', opponent: '', home: 'heim', result: '' }); draw(); });
+      el('kaderBody').querySelectorAll('[data-rdel]').forEach((b) => b.addEventListener('click', () => { roster.splice(Number(b.dataset.rdel), 1); draw(); }));
+      el('kaderBody').querySelectorAll('[data-mdel]').forEach((b) => b.addEventListener('click', () => { matches.splice(Number(b.dataset.mdel), 1); draw(); }));
+      el('kaderBody').querySelectorAll('[data-r]').forEach((i) => i.addEventListener('input', () => { roster[Number(i.dataset.r)][i.dataset.f] = i.value; }));
+      el('kaderBody').querySelectorAll('[data-m]').forEach((i) => i.addEventListener('change', () => { matches[Number(i.dataset.m)][i.dataset.f] = i.value; }));
+      el('kaderBody').querySelectorAll('[data-m]').forEach((i) => i.addEventListener('input', () => { matches[Number(i.dataset.m)][i.dataset.f] = i.value; }));
+    }
+
+    openModal('Kader & Spielplan: ' + team.name, '<div id="kaderBody"></div>',
+      '<button class="btn ghost" type="button" id="mCancel">Abbrechen</button><button class="btn" type="button" id="mSave">Speichern</button>');
+    draw();
+    el('mCancel').addEventListener('click', closeModal);
+    el('mSave').addEventListener('click', () => {
+      C.teams = C.teams.map((t) => (t.id === team.id
+        ? Object.assign({}, t, { roster: roster.filter((p) => p.name), matches: matches.filter((m) => m.date || m.opponent) })
+        : t));
+      persist(); closeModal(); render(); toast('Kader und Spielplan gespeichert');
     });
   }
 
@@ -468,7 +637,7 @@
     el('mClose').addEventListener('click', closeModal);
   }
 
-  const UPLOADABLE = ['image', 'url', 'logo', 'logoUrl'];
+  const UPLOADABLE = ['image', 'url', 'logo', 'logoUrl', 'photo', 'avatar_url'];
   const uploadRow = (key) => (window.OSGDB && window.OSGDB.configured)
     ? `<div class="uprow"><input type="file" data-up="${key}" accept="image/*,application/pdf" /><small>Datei hochladen, die Adresse wird automatisch eingetragen</small></div>`
     : '<small>Bild- oder Dateiadresse eintragen (Upload erst mit angeschlossenem Backend)</small>';
@@ -602,6 +771,7 @@
     else if (view === 'pages') c.innerHTML = pages();
     else if (view === 'settings') c.innerHTML = settings();
     else if (view === 'zugaenge') c.innerHTML = zugaenge();
+    else if (view === 'meinerechte') c.innerHTML = meineRechte();
     else if (COLLECTIONS[view]) c.innerHTML = collection(COLLECTIONS[view]);
     else { view = 'dashboard'; c.innerHTML = dashboard(); }
 
@@ -616,12 +786,43 @@
       const add = el('addBtn');
       if (add) add.addEventListener('click', () => editItem(cfg, null));
       c.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => editItem(cfg, C[cfg.key].find((x) => x.id === b.dataset.edit))));
+      c.querySelectorAll('[data-kader]').forEach((b) => b.addEventListener('click', () => kaderEditor(C.teams.find((x) => x.id === b.dataset.kader))));
       c.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => {
         if (!confirm('Eintrag wirklich löschen?')) return;
         C[cfg.key] = C[cfg.key].filter((x) => x.id !== b.dataset.del);
         persist(); render(); toast('Gelöscht');
       }));
     }
+    const rf = el('reqForm');
+    if (rf) rf.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(rf);
+      const res = await window.OSGDB.addRequest({
+        name: (myProfile && myProfile.name) || '',
+        wish_role: String(fd.get('wish_role')), wish_scope: String(fd.get('wish_scope') || ''),
+        reason: String(fd.get('reason') || '')
+      });
+      if (!res.ok) { toast('Fehler: ' + res.error); return; }
+      requests = (await window.OSGDB.listRequests()) || requests;
+      render(); toast('Anfrage gesendet');
+    });
+    c.querySelectorAll('[data-reqok]').forEach((b) => b.addEventListener('click', async () => {
+      const r = requests.find((x) => x.id === b.dataset.reqok);
+      const p = profiles.find((x) => x.id === r.user_id);
+      if (p && r.wish_role) await window.OSGDB.setProfile(p.id, { role: r.wish_role, approved: true });
+      const res = await window.OSGDB.setRequest(r.id, { status: 'genehmigt' });
+      if (!res.ok) { toast('Fehler: ' + res.error); return; }
+      profiles = (await window.OSGDB.listProfiles()) || profiles;
+      requests = (await window.OSGDB.listRequests()) || requests;
+      render(); toast('Rechte vergeben');
+    }));
+    c.querySelectorAll('[data-reqno]').forEach((b) => b.addEventListener('click', async () => {
+      const res = await window.OSGDB.setRequest(b.dataset.reqno, { status: 'abgelehnt' });
+      if (!res.ok) { toast('Fehler: ' + res.error); return; }
+      requests = (await window.OSGDB.listRequests()) || requests;
+      render(); toast('Anfrage abgelehnt');
+    }));
+
     const ni = el('newInvite');
     if (ni) ni.addEventListener('click', () => editInvite(null));
     c.querySelectorAll('[data-editp]').forEach((b) => b.addEventListener('click', () => editProfile(profiles.find((x) => x.id === b.dataset.editp))));
@@ -632,6 +833,13 @@
       if (!res.ok) { toast('Fehler: ' + res.error); return; }
       invites = (await window.OSGDB.listInvites()) || [];
       render(); toast('Einladung zurückgezogen');
+    }));
+    c.querySelectorAll('[data-role]').forEach((b) => b.addEventListener('click', async () => {
+      const p = profiles.find((x) => x.id === b.dataset.role);
+      const res = await window.OSGDB.setProfile(p.id, { role: p.role === 'admin' ? 'redaktion' : 'admin' });
+      if (!res.ok) { toast('Fehler: ' + res.error); return; }
+      profiles = (await window.OSGDB.listProfiles()) || profiles;
+      render(); toast('Rolle geändert');
     }));
     c.querySelectorAll('[data-appr]').forEach((b) => b.addEventListener('click', async () => {
       const p = profiles.find((x) => x.id === b.dataset.appr);
@@ -707,11 +915,13 @@
     if (DB && DB.configured) {
       const user = await DB.user();
       if (!user) { loginBackend('login'); return; }
+      await DB.detect();
       myProfile = await DB.profile();
       if (myProfile && myProfile.setupFehlt) { setupScreen(myProfile); return; }
       if (!myProfile || !myProfile.approved) { pendingScreen(myProfile || { email: user.email }); return; }
       profiles = (await DB.listProfiles()) || [];
       invites = (await DB.listInvites()) || [];
+      requests = (await DB.listRequests()) || [];
       const remote = await DB.fetchContent();
       if (remote) { S.save(remote); C = S.load(); }
       else { await DB.saveContent(C); }

@@ -14,6 +14,17 @@
     configured,
     client,
     bucket: cfg.bucket || 'medien',
+    features: { scope: false, requests: false },
+
+    /* Prüft, welche Schema-Erweiterungen in der Datenbank vorhanden sind */
+    async detect() {
+      if (!configured) { DB.features = { scope: true, requests: true }; return DB.features; }
+      const a = await client.from('profiles').select('id,scope_depts').limit(1);
+      DB.features.scope = !a.error;
+      const b = await client.from('rights_requests').select('id').limit(1);
+      DB.features.requests = !b.error;
+      return DB.features;
+    },
 
     /* ----- Inhalte ----- */
     async fetchContent() {
@@ -58,6 +69,101 @@
     async removeProcessed() {
       if (!configured) return { ok: true, local: true };
       const { error } = await client.from('submissions').delete().neq('status', 'neu');
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+
+    /* ----- Zugänge ----- */
+    async signUp(email, password, name) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const { error } = await client.auth.signUp({ email, password, options: { data: { name: name || '' } } });
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async profile() {
+      if (!configured) return null;
+      const { data: u } = await client.auth.getUser();
+      if (!u || !u.user) return null;
+      const { data, error } = await client.from('profiles').select('*').eq('id', u.user.id).maybeSingle();
+      if (error) {
+        const fehlt = error.code === '42P01' || /could not find the table/i.test(error.message || '');
+        // Tabelle fehlt: Zugangsverwaltung ist noch nicht eingerichtet
+        return { id: u.user.id, email: u.user.email, approved: !!fehlt, role: 'admin', setupFehlt: !!fehlt, fehler: error.message };
+      }
+      return data || { id: u.user.id, email: u.user.email, approved: false, role: 'redaktion' };
+    },
+    async listProfiles() {
+      if (!configured) return null;
+      const { data, error } = await client.from('profiles').select('*').order('created_at', { ascending: true });
+      if (error) { console.warn('Zugänge konnten nicht geladen werden:', error.message); return null; }
+      return data;
+    },
+    async setProfile(id, patch) {
+      if (!configured) return { ok: true, local: true };
+      const p = Object.assign({}, patch);
+      if (!DB.features.scope) { delete p.scope_depts; delete p.scope_teams; delete p.avatar_url; }
+      let { error } = await client.from('profiles').update(p).eq('id', id);
+      if (error && /(scope_|avatar_url)/.test(error.message || '')) {
+        DB.features.scope = false;
+        delete p.scope_depts; delete p.scope_teams; delete p.avatar_url;
+        ({ error } = await client.from('profiles').update(p).eq('id', id));
+      }
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async listInvites() {
+      if (!configured) return null;
+      const { data, error } = await client.from('invites').select('*').order('created_at', { ascending: true });
+      if (error) { console.warn('Einladungen konnten nicht geladen werden:', error.message); return null; }
+      return data;
+    },
+    async addInvite(inv) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      const row = {
+        email: String(inv.email).trim().toLowerCase(), name: inv.name || null,
+        phone: inv.phone || null, funktion: inv.funktion || null, role: inv.role || 'redaktion'
+      };
+      if (DB.features.scope) {
+        row.scope_depts = inv.scope_depts || [];
+        row.scope_teams = inv.scope_teams || [];
+      }
+      let { error } = await client.from('invites').upsert(row, { onConflict: 'email' });
+      if (error && /scope_/.test(error.message || '')) {
+        DB.features.scope = false;
+        delete row.scope_depts; delete row.scope_teams;
+        ({ error } = await client.from('invites').upsert(row, { onConflict: 'email' }));
+      }
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async removeInvite(email) {
+      if (!configured) return { ok: true, local: true };
+      const { error } = await client.from('invites').delete().eq('email', email);
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async removeProfile(id) {
+      if (!configured) return { ok: true, local: true };
+      const { error } = await client.from('profiles').delete().eq('id', id);
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+
+    /* ----- Rechteanfragen ----- */
+    async listRequests() {
+      if (!configured || !DB.features.requests) return null;
+      const { data, error } = await client.from('rights_requests').select('*').order('created_at', { ascending: false });
+      if (error) { console.warn('Rechteanfragen konnten nicht geladen werden:', error.message); return null; }
+      return data;
+    },
+    async addRequest(req) {
+      if (!configured) return { ok: false, error: 'Kein Backend konfiguriert' };
+      if (!DB.features.requests) return { ok: false, error: 'Bitte supabase-zustaendigkeit.sql im SQL Editor ausführen' };
+      const { data: u } = await client.auth.getUser();
+      if (!u || !u.user) return { ok: false, error: 'Nicht angemeldet' };
+      const { error } = await client.from('rights_requests').insert([{
+        user_id: u.user.id, email: u.user.email, name: req.name || null,
+        wish_role: req.wish_role || null, wish_scope: req.wish_scope || null, reason: req.reason || null
+      }]);
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
+    async setRequest(id, patch) {
+      if (!configured) return { ok: true, local: true };
+      const { error } = await client.from('rights_requests').update(patch).eq('id', id);
       return error ? { ok: false, error: error.message } : { ok: true };
     },
 

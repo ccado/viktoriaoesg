@@ -329,7 +329,7 @@
           if (!list.length) return '';
           return `<h4 class="group-title">${esc(g)}</h4><div class="people">${list.map((x) => `
             <div class="person">
-              <span class="avatar">${esc((x.name || '?').trim().charAt(0))}</span>
+              ${x.photo ? `<img class="avatar avatar--img" src="${esc(x.photo)}" alt="${esc(x.name)}" />` : `<span class="avatar">${esc((x.name || '?').trim().charAt(0))}</span>`}
               <div><strong>${esc(x.name)}</strong><span>${esc(x.role)}</span>
               ${x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : '<span class="muted">Kontakt über den Verein</span>'}</div>
             </div>`).join('')}</div>`;
@@ -400,7 +400,7 @@
   }
 
   const teamCard = (t, i) => `
-    <article class="team-card">
+    <a class="team-card" href="#/mannschaft/${esc(t.slug || t.id)}">
       ${photo(t.image, 'rotate', i || 0, 'team-card__img', 800, 500)}
       <div class="team-card__body">
         <h3>${esc(t.name)}</h3>
@@ -409,8 +409,54 @@
           <div><dt>Trainer</dt><dd>${esc(t.coaches || 'wird ergänzt')}</dd></div>
           <div><dt>Training</dt><dd>${esc(t.times || 'auf Anfrage')}</dd></div>
         </dl>
+        <span class="dept__link">Kader & Spielplan <span class="arr">→</span></span>
       </div>
-    </article>`;
+    </a>`;
+
+  function mannschaft(slug) {
+    const t = C.teams.find((x) => (x.slug || x.id) === slug);
+    if (!t) return notFound();
+    const roster = t.roster || [];
+    const matches = (t.matches || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    return pageHead(esc(t.group || t.dept) + (t.ageClass ? ' · ' + esc(t.ageClass) : ''), t.name, t.league || '') + `
+    <section class="section">
+      <div class="wrap prose-grid">
+        <div>${photo(t.image, 'rotate', 3, 'wide-img', 1400, 800)}</div>
+        <aside class="factbox">
+          <h4>Mannschaft</h4>
+          <div class="fact"><dt>Liga</dt><dd>${esc(t.league || 'Freizeitrunde')}</dd></div>
+          <div class="fact"><dt>Altersklasse</dt><dd>${esc(t.ageClass || t.group || '')}</dd></div>
+          <div class="fact"><dt>Trainer</dt><dd>${esc(t.coaches || 'wird ergänzt')}</dd></div>
+          <div class="fact"><dt>Training</dt><dd>${esc(t.times || 'auf Anfrage')}</dd></div>
+          ${t.contactEmail ? `<div class="fact"><dt>Kontakt</dt><dd><a href="mailto:${esc(t.contactEmail)}">${esc(t.contactEmail)}</a></dd></div>` : ''}
+          <a class="btn" href="#/kontakt?dept=${esc(t.dept)}" style="margin-top:18px">Probetraining anfragen <span class="arr">→</span></a>
+        </aside>
+      </div>
+    </section>
+    <section class="section alt">
+      <div class="wrap">
+        <div class="section-head"><div><span class="kicker">Kader</span><h2 class="section-title">Unser Team</h2></div></div>
+        ${roster.length ? `<div class="roster">${roster.map((p) => `
+          <div class="player"><span class="player__nr">${esc(p.nr || '')}</span>
+            <div><strong>${esc(p.name)}</strong><span>${esc(p.position || '')}</span></div></div>`).join('')}</div>`
+          : '<p class="muted">Der Kader wird gerade zusammengestellt.</p>'}
+      </div>
+    </section>
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head"><div><span class="kicker">Spielplan</span><h2 class="section-title">Nächste Spiele</h2></div>
+          <a class="eyebrow-link" href="#/termine">Alle Termine <span class="arr">→</span></a></div>
+        ${matches.length ? `<div class="panel light"><div class="panel__body">${matches.map((m) => `
+          <div class="ev">
+            <div class="ev__date"><b>${dt(m.date).slice(0, 5)}</b><span>${esc(m.time || '')}</span></div>
+            <div class="ev__main"><strong>${m.home === 'auswaerts' ? esc(m.opponent) + ' : ' + esc(C.settings.clubName) : esc(C.settings.clubName) + ' : ' + esc(m.opponent)}</strong>
+              <span>${m.home === 'auswaerts' ? 'Auswärtsspiel' : 'Heimspiel'}</span></div>
+            <span class="tag">${esc(m.result || 'offen')}</span>
+          </div>`).join('')}</div></div>`
+          : '<p class="muted">Der Spielplan wird noch eingetragen. Aktuelle Spiele stehen auf fussball.de.</p>'}
+      </div>
+    </section>`;
+  }
 
   function mannschaften() {
     const groups = [...new Set(C.teams.map((t) => t.group || t.dept))];
@@ -534,6 +580,7 @@
       case 'abteilungen': html = abteilungen(); break;
       case 'abteilung': html = abteilung(seg[1]); break;
       case 'mannschaften': html = mannschaften(); break;
+      case 'mannschaft': html = mannschaft(seg[1]); break;
       case 'news': html = seg[1] ? newsDetail(seg[1]) : newsList(); break;
       case 'termine': html = termine(); break;
       case 'faq': html = faq(); break;

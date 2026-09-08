@@ -107,18 +107,18 @@
     ],
 
     teams: [
-      { id: 't-h1', name: '1. Mannschaft', dept: 'Fußball', group: 'Senioren', league: 'Kreisliga B4 Dortmund', coaches: '', times: '', image: '', order: 1 },
-      { id: 't-h2', name: '2. Mannschaft', dept: 'Fußball', group: 'Senioren', league: 'Kreisliga C3 Dortmund', coaches: '', times: '', image: '', order: 2 },
-      { id: 't-h3', name: '3. Mannschaft', dept: 'Fußball', group: 'Senioren', league: 'Kreisliga C Dortmund', coaches: '', times: '', image: '', order: 3 },
-      { id: 't-ah', name: 'Altherrenmannschaft', dept: 'Fußball', group: 'Senioren', league: 'Freizeitrunde', coaches: '', times: '', image: '', order: 4 },
-      { id: 't-damen', name: 'Damen- und Mädchenmannschaft', dept: 'Fußball', group: 'Senioren', league: '', coaches: 'Ahmed Berro', times: '', image: '', order: 5 },
-      { id: 't-a', name: 'A-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: '', times: '', image: '', order: 11 },
-      { id: 't-b', name: 'B-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: '', times: '', image: '', order: 12 },
-      { id: 't-c', name: 'C-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: '', times: '', image: '', order: 13 },
-      { id: 't-d', name: 'D-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: 'Yousef Mahdi Selim (Co-Trainer D2)', times: '', image: '', order: 14 },
-      { id: 't-e', name: 'E-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: '', times: '', image: '', order: 15 },
-      { id: 't-f', name: 'F-Junioren', dept: 'Fußball', group: 'Junioren', league: '', coaches: 'Jakub Grzela (2. Trainer F1) · Ahmed Berro (F2)', times: '', image: '', order: 16 },
-      { id: 't-g', name: 'G-Junioren', dept: 'Fußball', group: 'Junioren', league: 'Bambini', coaches: '', times: '', image: '', order: 17 }
+      { id: 't-h1', name: '1. Mannschaft', dept: 'Fußball', group: 'Senioren', slug: 'erste-mannschaft', ageClass: 'Herren', league: 'Kreisliga B4 Dortmund', coaches: '', contactEmail: '', times: '', image: '', order: 1, roster: [], matches: [] },
+      { id: 't-h2', name: '2. Mannschaft', dept: 'Fußball', group: 'Senioren', slug: '2-mannschaft', ageClass: 'Herren', league: 'Kreisliga C3 Dortmund', coaches: '', contactEmail: '', times: '', image: '', order: 2, roster: [], matches: [] },
+      { id: 't-h3', name: '3. Mannschaft', dept: 'Fußball', group: 'Senioren', slug: '3-mannschaft', ageClass: 'Herren', league: 'Kreisliga C Dortmund', coaches: '', contactEmail: '', times: '', image: '', order: 3, roster: [], matches: [] },
+      { id: 't-ah', name: 'Altherrenmannschaft', dept: 'Fußball', group: 'Senioren', slug: 'altherrenmannschaft', ageClass: 'Herren', league: 'Freizeitrunde', coaches: '', contactEmail: '', times: '', image: '', order: 4, roster: [], matches: [] },
+      { id: 't-damen', name: 'Damen- und Mädchenmannschaft', dept: 'Fußball', group: 'Senioren', slug: 'damen-und-maedchenmannschaft', ageClass: 'Damen', league: '', coaches: 'Ahmed Berro', contactEmail: '', times: '', image: '', order: 5, roster: [], matches: [] },
+      { id: 't-a', name: 'A-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'a-junioren', ageClass: 'A-Jugend', league: '', coaches: '', contactEmail: '', times: '', image: '', order: 11, roster: [], matches: [] },
+      { id: 't-b', name: 'B-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'b-junioren', ageClass: 'B-Jugend', league: '', coaches: '', contactEmail: '', times: '', image: '', order: 12, roster: [], matches: [] },
+      { id: 't-c', name: 'C-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'c-junioren', ageClass: 'C-Jugend', league: '', coaches: '', contactEmail: '', times: '', image: '', order: 13, roster: [], matches: [] },
+      { id: 't-d', name: 'D-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'd-junioren', ageClass: 'D-Jugend', league: '', coaches: 'Yousef Mahdi Selim (Co-Trainer D2)', contactEmail: '', times: '', image: '', order: 14, roster: [], matches: [] },
+      { id: 't-e', name: 'E-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'e-junioren', ageClass: 'E-Jugend', league: '', coaches: '', contactEmail: '', times: '', image: '', order: 15, roster: [], matches: [] },
+      { id: 't-f', name: 'F-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'f-junioren', ageClass: 'F-Jugend', league: '', coaches: 'Jakub Grzela (2. Trainer F1) · Ahmed Berro (F2)', contactEmail: '', times: '', image: '', order: 16, roster: [], matches: [] },
+      { id: 't-g', name: 'G-Junioren', dept: 'Fußball', group: 'Junioren', slug: 'g-junioren', ageClass: 'G-Jugend', league: 'Bambini', coaches: '', contactEmail: '', times: '', image: '', order: 17, roster: [], matches: [] }
     ],
 
     faq: [
@@ -158,18 +158,18 @@
 
     /* Ansprechpartner, Kontaktdaten bewusst leer (Platzhalter), nur im Admin ergänzen. */
     people: [
-      { id: 'pe-1', name: 'Bahram Roshan', role: '1. Vorsitzender', area: 'Vorstand', email: '', phone: '', order: 1, publish: true },
-      { id: 'pe-2', name: 'Nima Habibivand', role: '2. Vorsitzender', area: 'Vorstand', email: '', phone: '', order: 2, publish: true },
-      { id: 'pe-3', name: 'Kapishan Kamalakumar', role: '1. Geschäftsführer', area: 'Vorstand', email: 'oesgviktoria08dortmund@gmail.com', phone: '', order: 3, publish: true },
-      { id: 'pe-4', name: 'Emre Gülec', role: '2. Geschäftsführer', area: 'Vorstand', email: '', phone: '', order: 4, publish: true },
-      { id: 'pe-5', name: 'Ali Fatih Kaya', role: '1. Kassierer', area: 'Vorstand', email: '', phone: '', order: 5, publish: true },
-      { id: 'pe-6', name: 'Sathesan Vaseeharam', role: '2. Kassierer', area: 'Vorstand', email: '', phone: '', order: 6, publish: true },
-      { id: 'pe-7', name: 'Serdar Ucer', role: '1. Marketingleiter', area: 'Vorstand', email: '', phone: '', order: 7, publish: true },
-      { id: 'pe-8', name: 'Ahmad Abdulla', role: '2. Marketingleiter', area: 'Vorstand', email: '', phone: '', order: 8, publish: true },
-      { id: 'pe-9', name: 'Elmar Rautenberg', role: 'Jugendreferent', area: 'Vorstand', email: '', phone: '', order: 9, publish: true },
-      { id: 'pe-10', name: 'Ahmed Berro', role: 'Jugendleiter & Sportleiter', area: 'Sport', email: '', phone: '', order: 10, publish: true },
-      { id: 'pe-11', name: 'Yousef Mahdi Selim', role: 'Co-Trainer D2', area: 'Trainerteam', email: '', phone: '', order: 11, publish: true },
-      { id: 'pe-12', name: 'Jakub Grzela', role: '2. Trainer F1', area: 'Trainerteam', email: '', phone: '', order: 12, publish: true }
+      { id: 'pe-1', name: 'Bahram Roshan', role: '1. Vorsitzender', area: 'Vorstand', email: '', phone: '', photo: '', order: 1, publish: true },
+      { id: 'pe-2', name: 'Nima Habibivand', role: '2. Vorsitzender', area: 'Vorstand', email: '', phone: '', photo: '', order: 2, publish: true },
+      { id: 'pe-3', name: 'Kapishan Kamalakumar', role: '1. Geschäftsführer', area: 'Vorstand', email: 'oesgviktoria08dortmund@gmail.com', phone: '', photo: '', order: 3, publish: true },
+      { id: 'pe-4', name: 'Emre Gülec', role: '2. Geschäftsführer', area: 'Vorstand', email: '', phone: '', photo: '', order: 4, publish: true },
+      { id: 'pe-5', name: 'Ali Fatih Kaya', role: '1. Kassierer', area: 'Vorstand', email: '', phone: '', photo: '', order: 5, publish: true },
+      { id: 'pe-6', name: 'Sathesan Vaseeharam', role: '2. Kassierer', area: 'Vorstand', email: '', phone: '', photo: '', order: 6, publish: true },
+      { id: 'pe-7', name: 'Serdar Ucer', role: '1. Marketingleiter', area: 'Vorstand', email: '', phone: '', photo: '', order: 7, publish: true },
+      { id: 'pe-8', name: 'Ahmad Abdulla', role: '2. Marketingleiter', area: 'Vorstand', email: '', phone: '', photo: '', order: 8, publish: true },
+      { id: 'pe-9', name: 'Elmar Rautenberg', role: 'Jugendreferent', area: 'Vorstand', email: '', phone: '', photo: '', order: 9, publish: true },
+      { id: 'pe-10', name: 'Ahmed Berro', role: 'Jugendleiter & Sportleiter', area: 'Sport', email: '', phone: '', photo: '', order: 10, publish: true },
+      { id: 'pe-11', name: 'Yousef Mahdi Selim', role: 'Co-Trainer D2', area: 'Trainerteam', email: '', phone: '', photo: '', order: 11, publish: true },
+      { id: 'pe-12', name: 'Jakub Grzela', role: '2. Trainer F1', area: 'Trainerteam', email: '', phone: '', photo: '', order: 12, publish: true }
     ]
   };
 
@@ -187,14 +187,33 @@
 
   const clone = (o) => JSON.parse(JSON.stringify(o));
 
+  const slugify = (s) => String(s).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  /* Ergänzt neue Felder in gespeicherten Daten, damit ältere Stände weiter funktionieren */
+  function normalize(d) {
+    (d.teams || []).forEach((t) => {
+      if (!t.slug) t.slug = slugify(t.name || t.id);
+      if (t.ageClass === undefined) t.ageClass = t.group === 'Junioren' ? String(t.name || '').replace('Junioren', 'Jugend') : '';
+      if (t.contactEmail === undefined) t.contactEmail = '';
+      if (!Array.isArray(t.roster)) t.roster = [];
+      if (!Array.isArray(t.matches)) t.matches = [];
+    });
+    (d.people || []).forEach((p) => { if (p.photo === undefined) p.photo = ''; });
+    (d.depts || []).forEach((x) => { if (!x.slug) x.slug = slugify(x.name || x.id); });
+    if (d.settings && d.settings.logoUrl === undefined) d.settings.logoUrl = 'logo.png';
+    if (d.settings && d.settings.heroStyle === undefined) d.settings.heroStyle = 'foto';
+    return d;
+  }
+
   const Store = {
     uid,
     defaults: () => clone(DEFAULTS),
     load() {
       try {
         const raw = localStorage.getItem(CKEY);
-        return raw ? deepMerge(clone(DEFAULTS), JSON.parse(raw)) : clone(DEFAULTS);
-      } catch (e) { return clone(DEFAULTS); }
+        return normalize(raw ? deepMerge(clone(DEFAULTS), JSON.parse(raw)) : clone(DEFAULTS));
+      } catch (e) { return normalize(clone(DEFAULTS)); }
     },
     save(data) {
       localStorage.setItem(CKEY, JSON.stringify(data));

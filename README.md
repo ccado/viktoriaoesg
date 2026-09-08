@@ -45,11 +45,44 @@ Die Website läuft auch ohne Backend (dann lokal im Browser). Für echten Betrie
 
 Die Topbar im Admin zeigt an, ob das Backend verbunden ist oder nur lokal gespeichert wird.
 
-**E-Mail bei neuer Anfrage:** in Supabase unter "Database, Webhooks" einen Webhook auf
-`submissions` (Insert) legen, der eine Edge Function oder einen Dienst wie Resend anspricht.
-Ohne Webhook stehen neue Anfragen trotzdem im Admin unter "Anfragen".
+**E-Mail bei neuer Anfrage:** Datei `supabase-email.sql` einrichten.
+
+1. Kostenloses Konto auf resend.com anlegen, unter "API Keys" einen Key erzeugen (beginnt mit `re_`).
+2. In `supabase-email.sql` den Platzhalter `HIER_RESEND_API_KEY_EINSETZEN` durch den Key ersetzen
+   und bei `mail_to` die Empfängeradresse eintragen.
+3. Skript im Supabase SQL Editor ausführen.
+4. Testanfrage über das Kontaktformular schicken, die Mail kommt innerhalb weniger Sekunden.
+
+Solange der Absender `onboarding@resend.dev` genutzt wird, verschickt Resend nur an die
+E-Mail-Adresse des Resend-Kontos. Für beliebige Empfänger die Domain `oesg08.de` in Resend
+verifizieren (drei DNS-Einträge bei IONOS) und danach
+`update private_settings set value = 'ÖSG Viktoria 08 <info@oesg08.de>' where key = 'mail_from';`
+ausführen.
+
+Der API-Key liegt in der Tabelle `private_settings`, die per RLS ohne Policy komplett
+gesperrt ist und über die öffentliche API nicht gelesen werden kann.
 
 Dateien dafür: `supabase.sql` (Schema), `supabase-config.js` (Zugangsdaten), `db.js` (Datenzugriff).
+
+## Zugänge und Rechte
+
+Datei `supabase-zugaenge.sql` im SQL Editor ausführen (nach `supabase.sql`).
+
+Rechtestufen, in der Datenbank durchgesetzt:
+| Stufe | Darf |
+|---|---|
+| admin | alles, inklusive Zugänge freischalten und Rechte vergeben |
+| redaktion | Inhalte pflegen, Anfragen bearbeiten, Dateien hochladen |
+| lesen | alles ansehen, nichts ändern |
+
+Zwei Wege zum Zugang:
+1. **Vorbereiten:** Admin, Zugänge, "+ Zugang anlegen" mit Name, E-Mail, Telefon, Funktion und
+   Rechten. Die Person registriert sich auf `admin.html` mit genau dieser E-Mail und ist danach
+   sofort freigeschaltet.
+2. **Selbst registrieren:** Person legt sich auf `admin.html` ein Konto an, landet auf
+   "Warten auf Freischaltung" und wird von einem Admin unter Zugänge freigegeben.
+
+Oberadmin ist `djojananil@gmail.com`. Für `info@oesg08.de` liegt eine Admin-Einladung bereit.
 
 ## Wichtige Hinweise
 - **Kontaktdaten der Ansprechpartner sind bewusst leer** (Platzhalter). Namen und Funktionen

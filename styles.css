@@ -575,6 +575,17 @@ a:not(.btn):hover { color: var(--brand-2); }
 .faq-cta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 26px; }
 .faq-cta p { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: 18px; }
 
+/* ===== Kader ========================================================*/
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.player { display: flex; align-items: center; gap: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px 16px; }
+.player__nr { font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--brand); min-width: 30px; text-align: center; }
+.player strong { font-family: var(--display); font-weight: 600; text-transform: uppercase; font-size: 16px; display: block; line-height: 1.1; }
+.player span { font-size: 13px; color: var(--ink-faint); }
+.avatar--img { object-fit: cover; }
+.team-card { color: inherit; display: block; transition: transform .2s ease, box-shadow .25s ease; }
+.team-card:hover { transform: translateY(-4px); box-shadow: 0 22px 46px -26px rgba(0,0,0,.35); }
+.team-card .dept__link { margin-top: 12px; display: inline-flex; }
+
 /* Burger */
 .burger {
   width: 46px; height: 40px; border: 1px solid var(--line-2); border-radius: var(--radius);

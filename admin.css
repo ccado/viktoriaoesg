@@ -107,3 +107,15 @@ td.actions button{margin-left:6px}
 .uprow input[type=file]{font-size:13px;color:var(--a-ink-soft)}
 .badge-db{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:999px;background:#e7f5ee;color:var(--a-ok);font-weight:600}
 .badge-db.local{background:#fdf3e3;color:var(--a-warn)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--a-line);border-radius:999px;padding:6px 12px;font-size:13.5px;background:#fff;cursor:pointer}
+.chip input{width:15px;height:15px}
+.chip:has(input:checked){border-color:var(--a-accent);background:#eef2f8;color:var(--a-accent);font-weight:600}
+
+.avatar-img{width:34px;height:34px;border-radius:50%;object-fit:cover;margin-right:10px;vertical-align:middle}
+.logo-thumb{max-width:90px;max-height:38px;object-fit:contain;display:block}
+.sheet{width:min(900px,100%)}
+.sheet__body table input,.sheet__body table select{font-family:var(--font);font-size:14px;padding:7px 9px;border:1px solid var(--a-line);border-radius:5px;width:100%}
+.sheet__body th{padding:10px 12px}
+.sheet__body td{padding:8px 12px}
